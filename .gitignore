@@ -1,0 +1,21 @@
+# CMake build output + fetched Box2D (large, regenerable)
+spike/xplat/build/
+
+# generated audio (regenerate: python spike_plinko.py / spike_tempo.py)
+spike/out/
+
+# transient determinism run files (out_windows.txt is kept as the committed reference)
+spike/xplat/run_*.txt
+spike/xplat/hash.txt
+spike/xplat/raw.txt
+
+# python cache
+__pycache__/
+*.pyc
+
+# machine-local Claude Code settings (not shared)
+.claude/settings.local.json
+
+# OS cruft
+.DS_Store
+Thumbs.db

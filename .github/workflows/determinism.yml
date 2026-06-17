@@ -1,0 +1,93 @@
+name: cross-platform-determinism
+
+# T0a gate: does Box2D v3 produce BIT-IDENTICAL physics across OS + CPU arch?
+# Each runner builds the spike harness, runs it, normalizes line endings, and
+# hashes the raw IEEE-754 trajectory dump. The compare job fails if any platform
+# disagrees. macos-latest is Apple Silicon (arm64); the others are x86_64, plus
+# macos-13 (Intel x64) so we can tell an OS difference apart from an arch one.
+
+on:
+  push:
+    paths: ["spike/xplat/**", ".github/workflows/determinism.yml"]
+  workflow_dispatch:
+
+jobs:
+  render:
+    name: render-${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-13, macos-latest]
+    defaults:
+      run:
+        shell: bash
+        working-directory: spike/xplat
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure (FetchContent pulls Box2D v3.1.1)
+        run: cmake -B build -S . -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --config Release
+
+      - name: Run + normalize line endings
+        run: |
+          BIN=""
+          for c in build/Release/xplat.exe build/Release/xplat build/xplat.exe build/xplat; do
+            if [ -f "$c" ]; then BIN="$c"; break; fi
+          done
+          if [ -z "$BIN" ]; then echo "xplat binary not found"; ls -R build | head -50; exit 1; fi
+          echo "running $BIN"
+          "./$BIN" | tr -d '\r' > out.txt
+          echo "lines: $(wc -l < out.txt)"
+
+      - name: Hash
+        run: |
+          if command -v sha256sum >/dev/null 2>&1; then
+            H=$(sha256sum out.txt | cut -d' ' -f1)
+          else
+            H=$(shasum -a 256 out.txt | cut -d' ' -f1)
+          fi
+          echo "$H" | tee hash.txt
+          echo "### ${{ matrix.os }}: \`$H\`" >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: out-${{ matrix.os }}
+          path: |
+            spike/xplat/out.txt
+            spike/xplat/hash.txt
+
+  compare:
+    name: compare-platforms
+    needs: render
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Compare hashes across platforms
+        run: |
+          set -e
+          echo "Per-platform hashes:"
+          for d in artifacts/out-*; do
+            printf "  %-22s %s\n" "$(basename "$d")" "$(cat "$d/hash.txt")"
+          done
+          U=$(cat artifacts/out-*/hash.txt | sort -u | wc -l | tr -d ' ')
+          if [ "$U" -eq 1 ]; then
+            echo ""
+            echo "GREEN: all platforms produced bit-identical physics."
+            echo "Cross-platform determinism holds. The shared-board promise is real."
+          else
+            echo ""
+            echo "RED: platforms diverged ($U distinct results). First diff:"
+            mapfile -t F < <(ls artifacts/out-*/out.txt | sort)
+            diff "${F[0]}" "${F[1]}" | head -20 || true
+            echo ""
+            echo "If only the arm64 macOS run differs, it's an architecture issue,"
+            echo "not an OS one (compare macos-13 (x64) vs macos-latest (arm64))."
+            exit 1
+          fi

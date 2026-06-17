@@ -1,0 +1,3 @@
+# Keep the determinism reference output byte-exact (LF), so its recorded SHA256
+# stays valid regardless of the checkout platform. Do NOT apply EOL conversion.
+spike/xplat/out_windows.txt -text

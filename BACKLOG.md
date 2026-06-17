@@ -19,6 +19,15 @@ context to pick up cold.
   deterministic by design), not the research-grade fixed-point project we assumed. Now in
   v1 scope. See ARCHITECTURE.md §2. Kept here only as a record of the reversal.
 
+### Linux support (build + determinism CI)
+- **What:** A Linux VST3 build target and a Linux leg in the determinism CI matrix.
+- **Why deferred:** Linux DAW usage (Reaper/Bitwig on Linux) is a rounding error in the
+  VST/AU market; not a v1 ship target. Descoped from the determinism matrix 2026-06-17 to
+  keep CI lean (kept Windows + macOS Intel + macOS arm64).
+- **When worth it:** if Linux demand appears, or for a Bitwig/Reaper-Linux audience. Adding
+  it back is a one-line matrix change.
+- **Priority:** P3.
+
 ### Distribution pipeline
 - **What:** Build/sign/notarize VST3 + AU, installer, release CI for Win/Mac.
 - **Why deferred:** Not needed for personal use; required before any public release.

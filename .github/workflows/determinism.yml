@@ -1,10 +1,13 @@
 name: cross-platform-determinism
 
-# T0a gate: does Box2D v3 produce BIT-IDENTICAL physics across OS + CPU arch?
-# Each runner builds the spike harness, runs it, normalizes line endings, and
-# hashes the raw IEEE-754 trajectory dump. The compare job fails if any platform
-# disagrees. macos-latest is Apple Silicon (arm64); the others are x86_64, plus
-# macos-13 (Intel x64) so we can tell an OS difference apart from an arch one.
+# T0a gate: does Box2D v3 produce BIT-IDENTICAL physics across our SHIP targets?
+# Ship targets are Windows + macOS (VST3/AU); Linux is descoped for v1 (see BACKLOG).
+# Each runner builds the spike harness, runs it, normalizes line endings, and hashes
+# the raw IEEE-754 trajectory dump. The compare job fails if any platform disagrees.
+# macos-latest = Apple Silicon (arm64); macos-13 = Intel (x64); windows = x64. Keeping
+# both Mac arches covers the Intel-vs-Apple-Silicon split AND the hardest determinism
+# case (cross-architecture). The compare job runs on ubuntu only as a cheap diff host,
+# not as a tested platform.
 
 on:
   push:
@@ -18,7 +21,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-13, macos-latest]
+        os: [windows-latest, macos-13, macos-latest]
     defaults:
       run:
         shell: bash

@@ -63,9 +63,9 @@ To complete the cross-platform gate: build+run on macOS and Linux, normalize wit
 `tr -d '\r'`, then check each hash against the Windows hash above. All equal => GREEN.
 
 **Easiest path — let CI do it:** `.github/workflows/determinism.yml` runs this on
-ubuntu + windows + macOS (Intel x64 and Apple Silicon arm64), normalizes, and fails if
-any platform disagrees. Push the repo to GitHub and it runs automatically. Requires the
-project to be a git repo on GitHub first.
+windows + macOS (Intel x64 and Apple Silicon arm64), normalizes, and fails if any
+platform disagrees. (Linux is descoped for v1 — not a VST/AU ship target; see BACKLOG.)
+Push the repo to GitHub and it runs automatically.
 
 Exact commands that worked on Windows (from `spike/xplat/`):
 ```

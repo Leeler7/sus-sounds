@@ -45,7 +45,7 @@ inline juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout
     add(pid::tone,        "Tone",         NormalisableRange<float>(0.0f, 1.0f),        0.5f);  // noon
     add(pid::panWidth,    "Width",        NormalisableRange<float>(0.0f, 1.0f),        0.5f);  // noon (modulate wider/narrower)
     add(pid::dryWet,      "Dry/Wet",      NormalisableRange<float>(0.0f, 1.0f),        0.5f);  // half wet
-    add(pid::level,       "Level",        NormalisableRange<float>(0.0f, 2.0f),        1.0f);  // unity at noon
+    addSkew(pid::level, "Level", 0.0f, 4.0f, 1.0f);   // unity at noon, up to 4x (~+12 dB headroom)
     p.push_back(std::make_unique<AudioParameterChoice>(ParameterID{ pid::source, 1 }, "Source",
                                                        StringArray{ "Synth", "Input", "WAV Loop" }, 0));
     return { p.begin(), p.end() };

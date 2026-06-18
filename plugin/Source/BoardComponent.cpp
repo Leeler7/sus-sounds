@@ -17,16 +17,17 @@ void BoardComponent::paint(juce::Graphics& g) {
     g.drawLine(sx(0.0f), sy(0.0f), sx(0.0f), sy(board_.topY), 2.0f);
     g.drawLine(sx(board_.width), sy(0.0f), sx(board_.width), sy(board_.topY), 2.0f);
 
-    juce::Graphics::ScopedSaveState clipState(g);   // clip pegs/ball to the board (overhang hidden)
-    g.reduceClipRegion(area.toNearestInt());
-
-    for (int i = 0; i < board_.pegCount; ++i) {
-        float pr = board_.pegRad[i] * scale();   // per-peg size
-        float cx = sx(board_.pegX[i]), cy = sy(board_.pegY[i]);
-        juce::Colour c = (board_.pegType[i] == 1) ? juce::Colour(0xff5bc0be)   // reverb = teal
-                                                  : juce::Colour(0xffe0a458);  // delay  = amber
-        g.setColour(c);
-        g.fillEllipse(cx - pr, cy - pr, pr * 2.0f, pr * 2.0f);
+    {   // clip ONLY the pegs to the board (overhang hidden). The ball is NEVER clipped.
+        juce::Graphics::ScopedSaveState clipState(g);
+        g.reduceClipRegion(area.toNearestInt());
+        for (int i = 0; i < board_.pegCount; ++i) {
+            float pr = board_.pegRad[i] * scale();   // per-peg size
+            float cx = sx(board_.pegX[i]), cy = sy(board_.pegY[i]);
+            juce::Colour c = (board_.pegType[i] == 1) ? juce::Colour(0xff5bc0be)   // reverb = teal
+                                                      : juce::Colour(0xffe0a458);  // delay  = amber
+            g.setColour(c);
+            g.fillEllipse(cx - pr, cy - pr, pr * 2.0f, pr * 2.0f);
+        }
     }
 
     float bx = sx(proc_.ballNX.load(std::memory_order_relaxed) * board_.width);
@@ -49,12 +50,12 @@ void BoardComponent::paint(juce::Graphics& g) {
 }
 
 int BoardComponent::pegAt(float bx, float by) const {
-    float r = board_.pegRadius * 1.8f;   // a little generous for easy clicking
-    int best = -1; float bestD2 = r * r;
+    int best = -1; float bestD2 = 1e9f;
     for (int i = 0; i < board_.pegCount; ++i) {
         float dx = bx - board_.pegX[i], dy = by - board_.pegY[i];
         float d2 = dx * dx + dy * dy;
-        if (d2 < bestD2) { bestD2 = d2; best = i; }
+        float hitR = board_.pegRad[i] * 1.15f;   // this peg's own size (+ a little grab forgiveness)
+        if (d2 <= hitR * hitR && d2 < bestD2) { bestD2 = d2; best = i; }  // nearest peg under the cursor
     }
     return best;
 }

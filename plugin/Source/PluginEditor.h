@@ -41,8 +41,6 @@ private:
 
     juce::ComboBox busBox_;   // active effect bus (drives the brush + the per-bus sliders above)
     int activeBus_ = 0;
-    float busBounce_[kNumBuses][2];   // per-bus brush memory: [bus][type] bounce (recalled on switch)
-    float busSize_  [kNumBuses][2];   // per-bus brush memory: [bus][type] size
     void reloadBusSliders();  // load ALL per-bus peg settings (bounce/size + effect) for the active bus
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PlinkoAudioProcessorEditor)

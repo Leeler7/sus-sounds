@@ -21,8 +21,16 @@ namespace {
 
 BoardComponent::BoardComponent(PlinkoAudioProcessor& p) : proc_(p) {
     board_ = proc_.board();   // start from the processor's current board
+    resetBusPresets();
     setWantsKeyboardFocus(true);
     startTimerHz(60);
+}
+
+void BoardComponent::resetBusPresets() {
+    for (int b = 0; b < kNumBuses; ++b) {
+        busBounce_[b][0] = busBounce_[b][1] = 1.0f;
+        busSize_[b][0]   = busSize_[b][1]   = 0.0225f;
+    }
 }
 BoardComponent::~BoardComponent() { stopTimer(); }
 
@@ -111,10 +119,10 @@ bool BoardComponent::addPeg(float bx, float by) {
     int n = board_.pegCount;
     board_.pegX[n] = bx;
     board_.pegY[n] = by;
-    board_.pegType[n] = brushType_;                  // active brush decides type...
-    board_.pegRest[n] = brushBounce_[brushType_];    // ...bounce...
-    board_.pegRad[n]  = brushSize_[brushType_];      // ...size...
-    board_.pegBus[n]  = brushBus_;                   // ...and effect bus
+    board_.pegType[n] = brushType_;                          // active brush decides type...
+    board_.pegBus[n]  = brushBus_;                           // ...bus...
+    board_.pegRest[n] = busBounce_[brushBus_][brushType_];   // ...and the bus's bounce + size preset
+    board_.pegRad[n]  = busSize_[brushBus_][brushType_];
     board_.pegCount = n + 1;
     return true;
 }
@@ -398,16 +406,22 @@ void BoardComponent::runMenuOp(int id) {
         case miBounceUp: for (int i : sel_) board_.pegRest[i] = juce::jmin(2.0f, board_.pegRest[i] + 0.2f); break;
         case miBounceDn: for (int i : sel_) board_.pegRest[i] = juce::jmax(0.0f, board_.pegRest[i] - 0.2f); break;
         case miMirror:   for (int i : sel_) board_.pegX[i]    = 2.0f * kBoardCenterX - board_.pegX[i]; break;  // reflect across the board center
-        case miApplyBrush:
+        case miApplyBrush:                               // stamp the full active brush (type+bus+bounce+size)
             for (int i : sel_) {
                 board_.pegType[i] = brushType_;
-                board_.pegRest[i] = brushBounce_[brushType_];
-                board_.pegRad[i]  = brushSize_[brushType_];
+                board_.pegBus[i]  = brushBus_;
+                board_.pegRest[i] = busBounce_[brushBus_][brushType_];
+                board_.pegRad[i]  = busSize_[brushBus_][brushType_];
             }
             break;
-        case miBus1: case miBus2: case miBus3: case miBus4:
-            for (int i : sel_) board_.pegBus[i] = id - miBus1;
-            break;
+        case miBus1: case miBus2: case miBus3: case miBus4: {
+            int bus = id - miBus1;                       // assign bus AND apply its full preset
+            for (int i : sel_) {
+                board_.pegBus[i]  = bus;
+                board_.pegRest[i] = busBounce_[bus][board_.pegType[i]];
+                board_.pegRad[i]  = busSize_[bus][board_.pegType[i]];
+            }
+        } break;
         case miAlignRow: { float s = 0; for (int i : sel_) s += board_.pegY[i]; float a = s / sel_.size(); for (int i : sel_) board_.pegY[i] = a; } break;
         case miAlignCol: { float s = 0; for (int i : sel_) s += board_.pegX[i]; float a = s / sel_.size(); for (int i : sel_) board_.pegX[i] = a; } break;
         case miDistH:    distribute(true);  break;

@@ -2,6 +2,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <vector>
 #include "PhysicsCore.h"
+#include "SoundEngine.h"   // kNumBuses
 
 class PlinkoAudioProcessor;
 
@@ -24,10 +25,15 @@ public:
 
     // Brush: properties applied to NEWLY placed pegs (existing pegs untouched).
     void setBrushType(int t)              { brushType_ = t; }
-    void setBrushBounce(int type, float v){ brushBounce_[type & 1] = v; }
-    void setBrushSize(int type, float v)  { brushSize_[type & 1]  = v; }
-    void setBrushBus(int b)               { brushBus_ = b; }   // effect bus for newly placed pegs
+    void setBrushBus(int b)               { brushBus_ = juce::jlimit(0, kNumBuses - 1, b); }  // bus for new pegs
     int  brushType() const                { return brushType_; }
+    // Per-bus peg presets (single source of truth; the editor sliders read/write these). A bus
+    // stores bounce + size per peg type, alongside its effect character (which lives in the engine).
+    void  setBusBounce(int bus, int type, float v) { busBounce_[bus & (kNumBuses - 1)][type & 1] = v; }
+    void  setBusSize  (int bus, int type, float v) { busSize_  [bus & (kNumBuses - 1)][type & 1] = v; }
+    float busBounce(int bus, int type) const { return busBounce_[bus & (kNumBuses - 1)][type & 1]; }
+    float busSize  (int bus, int type) const { return busSize_  [bus & (kNumBuses - 1)][type & 1]; }
+    void  resetBusPresets();   // all buses back to default bounce/size
 
     void paint(juce::Graphics&) override;
     void mouseDown(const juce::MouseEvent&) override;
@@ -89,7 +95,7 @@ private:
     std::vector<BoardParams> undo_; // undo stack (capped)
 
     int brushType_ = 0;                       // 0 = delay, 1 = reverb (for new pegs)
-    float brushBounce_[2] = { 1.0f, 1.0f };   // [delay, reverb] new-peg bounce (1 = neutral)
-    float brushSize_[2]   = { 0.0225f, 0.0225f };// [delay, reverb] new-peg size
-    int   brushBus_ = 0;                          // effect bus for newly placed pegs
+    int brushBus_  = 0;                       // effect bus for newly placed pegs
+    float busBounce_[kNumBuses][2];           // [bus][type] bounce preset for new pegs
+    float busSize_  [kNumBuses][2];           // [bus][type] size preset for new pegs
 };

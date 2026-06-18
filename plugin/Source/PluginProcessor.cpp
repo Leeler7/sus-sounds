@@ -8,7 +8,7 @@ PlinkoAudioProcessor::PlinkoAudioProcessor()
     // Clean starting board: ~half as many pegs, small, all plain delay pegs.
     // (The user builds it up via the GUI; reverb/bumper pegs are made by editing.)
     makeStaggeredBoard(board_, 7, 5);
-    board_.pegRadius = 0.0075f;
+    board_.pegRadius = 0.011f;   // ~50% bigger than before (readable after the aspect fix)
     ev_.reserve(512);
     hits_.reserve(512);
     pendingEdits_.reserve(256);
@@ -53,6 +53,7 @@ void PlinkoAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
                     case EditType::Delete:  physics_.removePeg(e.idx); break;
                     case EditType::SetType: physics_.setPegType(e.idx, e.pegType); break;
                     case EditType::SetDrop: physics_.setDropPoint(e.x, e.y); break;
+                    case EditType::Clear:   physics_.clearPegs(); break;
                 }
             }
             applyBuf_.clear();

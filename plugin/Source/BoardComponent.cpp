@@ -78,6 +78,14 @@ void BoardComponent::removePeg(int i) {
     board_.pegCount = last;
 }
 
+void BoardComponent::clearAllPegs() {
+    board_.pegCount = 0;
+    PlinkoAudioProcessor::Edit ed;
+    ed.type = PlinkoAudioProcessor::EditType::Clear;
+    proc_.pushEdit(ed);
+    repaint();
+}
+
 void BoardComponent::eraseAt(int i) {
     PlinkoAudioProcessor::Edit ed;
     ed.type = PlinkoAudioProcessor::EditType::Delete;

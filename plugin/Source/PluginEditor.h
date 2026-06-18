@@ -21,6 +21,7 @@ private:
     PlinkoAudioProcessor& proc_;
     BoardComponent board_;
     juce::TextButton playStop_;
+    juce::TextButton clearBtn_;
     Knob gravity_, feedback_, delayMix_, reverbMix_, reverbDecay_, tone_, width_, dryWet_, level_;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PlinkoAudioProcessorEditor)

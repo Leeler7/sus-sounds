@@ -27,6 +27,10 @@ PlinkoAudioProcessorEditor::PlinkoAudioProcessorEditor(PlinkoAudioProcessor& p)
         playStop_.setButtonText(r ? "Stop" : "Start");
         board_.repaint();
     };
+
+    addAndMakeVisible(clearBtn_);
+    clearBtn_.setButtonText("Clear");
+    clearBtn_.onClick = [this] { board_.clearAllPegs(); };
     addKnob(gravity_,     pid::gravity,     "Gravity");
     addKnob(feedback_,    pid::feedback,    "Feedback");
     addKnob(delayMix_,    pid::delayMix,    "Delay");
@@ -50,6 +54,7 @@ void PlinkoAudioProcessorEditor::resized() {
     auto knobRow = r.removeFromBottom(104);
     auto topStrip = r.removeFromTop(30);
     playStop_.setBounds(topStrip.removeFromLeft(90).reduced(4, 4));
+    clearBtn_.setBounds(topStrip.removeFromLeft(80).reduced(4, 4));
     board_.setBounds(r.reduced(8));
 
     Knob* ks[] = { &gravity_, &feedback_, &delayMix_, &reverbMix_, &reverbDecay_, &tone_, &width_, &dryWet_, &level_ };

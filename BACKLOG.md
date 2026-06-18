@@ -111,16 +111,22 @@ context to pick up cold.
 
 ## GUI follow-ups
 
-### Peg Parameter Interface (per-peg editing) — user request 2026-06-17
-- **What:** A UI to select a peg and adjust its per-peg properties: **bounce** (restitution —
-  there is NO separate "bumper type"; every peg just has adjustable bounciness), delay-vs-reverb
-  type, and (future) per-peg pitch/pan/filter overrides. Likely: click-select a peg → a small
-  inspector panel (or radial menu) with sliders, or scroll-over-peg to nudge bounce.
-- **Why:** bounce is already a per-peg value in the data model (BoardParams.pegRest[]) but the
-  GUI can't set it yet (new pegs all default to 0.5). This is how the player shapes a board's
-  feel. (The red "bumper" coloring was removed — pegs are amber=delay/teal=reverb; bounce is a
-  property, not a type.)
-- **Priority:** P2, after start/stop.
+### Peg Parameter Interface — BRUSH panels (left=delay, right=reverb) — user request 2026-06-18
+- **What:** Use the side real-estate: a **delay-peg settings panel on the LEFT**, a
+  **reverb-peg settings panel on the RIGHT**. These set the "brush" for **newly placed** pegs
+  (NOT already-placed ones): bounce (restitution), size, and per-type sound params (pitch
+  range, filter, etc.). Placing a peg uses the active side's settings.
+- **Why:** bounce/size are per-peg in the data model but the GUI can't set them yet (new pegs
+  default to bounce 0.5, global size). This is how the player shapes a board.
+- **Note:** requires per-peg SIZE (today pegRadius is global — make it per-peg, like pegRest).
+- **Priority:** P2.
+
+### Multi-select + right-click menu — user request 2026-06-18
+- **What:** A hotkey/drag to multi-select pegs, then a right-click context menu:
+  (1) Change type, (2) Increase size, (3) Decrease size, (4) Delete selected.
+- **Depends on:** per-peg size (same as above). Selection state in BoardComponent; edits sent
+  as a batch through the existing edit queue.
+- **Priority:** P2.
 
 ## Open product questions to revisit
 

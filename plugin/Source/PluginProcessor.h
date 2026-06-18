@@ -42,7 +42,7 @@ public:
 
     // GUI thread: enqueue a single live peg edit. The audio thread applies it to the
     // running physics next block (no re-init -> the ball keeps flowing).
-    enum class EditType { Add, Move, Delete, SetType, SetDrop };
+    enum class EditType { Add, Move, Delete, SetType, SetDrop, Clear };
     struct Edit { EditType type; int idx = 0; float x = 0, y = 0, rest = 0.5f; int pegType = 0; };
     void pushEdit(const Edit& e);
 

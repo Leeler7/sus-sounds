@@ -14,8 +14,8 @@ void makeStaggeredBoard(BoardParams& p, int rows, int cols) {
             if (x > 0.06f && x < p.width - 0.06f) {
                 p.pegX[n] = x;
                 p.pegY[n] = y;
-                p.pegRest[n] = p.restitution;  // default; caller can raise individual pegs to bumpers
-                p.pegType[n] = 0;              // default delay peg; caller can mark reverb pegs
+                p.pegRest[n] = p.restitution;
+                p.pegType[n] = (r % 2 == 0) ? 0 : 1;  // alternate rows: delay / reverb / delay ...
                 ++n;
             }
         }
@@ -135,6 +135,12 @@ void PhysicsWorld::setPegType(int i, int type) {
 }
 
 void PhysicsWorld::setDropPoint(float x, float y) { p_.dropX = x; p_.dropY = y; }
+
+void PhysicsWorld::clearPegs() {
+    if (!inited_) return;
+    for (int i = 0; i < p_.pegCount; ++i) b2DestroyBody(pegBody_[i]);
+    p_.pegCount = 0;
+}
 
 void PhysicsWorld::holdAtDrop() {
     if (!inited_) return;

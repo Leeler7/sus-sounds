@@ -16,6 +16,8 @@ public:
     explicit BoardComponent(PlinkoAudioProcessor& p);
     ~BoardComponent() override;
 
+    void clearAllPegs();   // remove every peg (local + enqueue Clear edit)
+
     void paint(juce::Graphics&) override;
     void mouseDown(const juce::MouseEvent&) override;
     void mouseDrag(const juce::MouseEvent&) override;

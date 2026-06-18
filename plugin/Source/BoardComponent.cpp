@@ -17,6 +17,9 @@ void BoardComponent::paint(juce::Graphics& g) {
     g.drawLine(sx(0.0f), sy(0.0f), sx(0.0f), sy(board_.topY), 2.0f);
     g.drawLine(sx(board_.width), sy(0.0f), sx(board_.width), sy(board_.topY), 2.0f);
 
+    juce::Graphics::ScopedSaveState clipState(g);   // clip pegs/ball to the board (overhang hidden)
+    g.reduceClipRegion(area.toNearestInt());
+
     for (int i = 0; i < board_.pegCount; ++i) {
         float pr = board_.pegRad[i] * scale();   // per-peg size
         float cx = sx(board_.pegX[i]), cy = sy(board_.pegY[i]);
@@ -58,7 +61,8 @@ int BoardComponent::pegAt(float bx, float by) const {
 
 bool BoardComponent::addPeg(float bx, float by) {
     if (board_.pegCount >= 128) return false;
-    if (bx < 0.05f || bx > board_.width - 0.05f || by < board_.exitY + 0.05f || by > board_.topY - 0.02f)
+    // allow centers right up to the edges so a peg can clip ~half off the board
+    if (bx < 0.0f || bx > board_.width || by < board_.exitY || by > board_.topY)
         return false;
     int n = board_.pegCount;
     board_.pegX[n] = bx;
@@ -152,8 +156,8 @@ void BoardComponent::mouseDrag(const juce::MouseEvent& e) {
         return;
     }
     if (dragIdx_ < 0) return;
-    float bx = juce::jlimit(0.05f, board_.width - 0.05f, toBoardX(e.position.x));
-    float by = juce::jlimit(board_.exitY + 0.05f, board_.topY - 0.02f, toBoardY(e.position.y));
+    float bx = juce::jlimit(0.0f, board_.width, toBoardX(e.position.x));
+    float by = juce::jlimit(board_.exitY, board_.topY, toBoardY(e.position.y));
     board_.pegX[dragIdx_] = bx;
     board_.pegY[dragIdx_] = by;
     repaint();   // physics catches up on mouse-up (one Move edit, no ball reset)

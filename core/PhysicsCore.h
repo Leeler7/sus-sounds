@@ -97,6 +97,7 @@ public:
     void setPegType(int i, int type);
     void setBallBounce(float r);   // live ball restitution
     void setBallSize(float r);     // ball radius (applies on next drop)
+    void setWidth(float w);        // live board width: rebuilds the side walls (ball preserved)
     void setDropPoint(float x, float y);   // where the ball starts
     void holdAtDrop();                     // park the ball at the drop point (used while stopped)
     void clearPegs();                      // remove all pegs (ball keeps running)
@@ -113,6 +114,7 @@ private:
     void respawn();
     void createPegBody(int i);   // build the Box2D body+shape for peg i (type encoded in userData)
     void createBall();           // (re)create the ball fresh at the drop point + initial velocity
+    void createWalls();          // (re)build the side walls at x=0 and x=width
 
     BoardParams p_{};
     uint64_t baseSeed_ = 0;
@@ -130,6 +132,7 @@ private:
     b2ShapeId pegShape_[128]{}; // per-peg shape (for live type change via userData)
 
     b2WorldId world_{};
+    b2BodyId  wallBody_{};   // the two side walls (rebuilt live on width change)
     b2BodyId  ball_{};
     b2ShapeId ballShape_{};
     bool      inited_ = false;

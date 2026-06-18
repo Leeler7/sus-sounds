@@ -36,7 +36,7 @@ public:
     bool keyPressed(const juce::KeyPress&) override;
 
 private:
-    void timerCallback() override { repaint(); }
+    void timerCallback() override;
 
     // Aspect-correct board rect: one uniform scale for X and Y so circles stay circles and
     // the drawing matches the physics exactly (no distortion).

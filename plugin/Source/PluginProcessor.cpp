@@ -82,6 +82,8 @@ void PlinkoAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
     physics_.setGravity(gravity);
     physics_.setBallBounce(apvts.getRawParameterValue(pid::ballBounce)->load());
     physics_.setBallSize(apvts.getRawParameterValue(pid::ballSize)->load());
+    physics_.setWidth(apvts.getRawParameterValue(pid::boardWidth)->load());
+    board_.width = physics_.boardParams().width;   // keep the mirror current (re-prepare + GUI)
     engine_.setParams(ep_);
 
     hits_.clear();
@@ -113,6 +115,7 @@ void PlinkoAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
     ballNX.store(physics_.dbgBallX() / board_.width, std::memory_order_relaxed);
     ballNY.store(physics_.dbgBallY() / board_.topY, std::memory_order_relaxed);
     ballR.store(physics_.boardParams().ballRadius, std::memory_order_relaxed);
+    boardW.store(board_.width, std::memory_order_relaxed);
 }
 
 juce::AudioProcessorEditor* PlinkoAudioProcessor::createEditor() {

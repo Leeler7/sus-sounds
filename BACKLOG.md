@@ -111,12 +111,13 @@ context to pick up cold.
 
 ## GUI follow-ups
 
-### Board width adjustment — user idea 2026-06-18
-- **What:** A control to change the play-area width (p_.width). Wider board = more room / different feel.
-- **Needs:** live wall rebuild (track the wall body, destroy+recreate at the new width on change),
-  a board-width APVTS param, and the GUI must sync its board_.width (for aspect + normalization)
-  from a live value (atomic, like ballR). Pegs keep absolute x; the walls move out.
-- **Priority:** P2.
+### Board width adjustment — DONE on v0.2-dev 2026-06-18
+- Width param (0.6-1.8, noon=1.0) -> physics_.setWidth() rebuilds the side walls live (ball kept);
+  GUI syncs board_.width from a boardW atomic each frame (aspect + normalization). Pegs keep
+  absolute x (pegs beyond a shrunk width are unreachable + clipped, non-destructive). The Master
+  "Width" (pan) knob was renamed "Stereo" to disambiguate from the new Shape "Width".
+- POSSIBLE FOLLOW-UP: widening only adds room on the right (left wall fixed at 0). If symmetric
+  growth / recenter is wanted, revisit.
 
 ### UI reorg into SECTIONS (the big GUI build) — user request 2026-06-18
 Reorganize the editor into clear sections instead of one knob row:

@@ -27,7 +27,7 @@ private:
 
     juce::TextButton playStop_, clearBtn_, revertBtn_;
 
-    Knob gravity_, ballSize_, ballBounce_;                 // Shape
+    Knob gravity_, boardWidth_, ballSize_, ballBounce_;    // Shape
     juce::TextButton delayBrushBtn_;                        // Delay panel
     juce::Slider delayBounce_, delaySize_;  juce::Label delayBounceL_, delaySizeL_;
     Knob feedback_, delayMix_;

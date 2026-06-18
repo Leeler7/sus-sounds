@@ -22,6 +22,11 @@ BoardComponent::BoardComponent(PlinkoAudioProcessor& p) : proc_(p) {
 }
 BoardComponent::~BoardComponent() { stopTimer(); }
 
+void BoardComponent::timerCallback() {
+    board_.width = proc_.boardW.load(std::memory_order_relaxed);  // track the live board width
+    repaint();
+}
+
 bool BoardComponent::isSelected(int i) const {
     return std::find(sel_.begin(), sel_.end(), i) != sel_.end();
 }

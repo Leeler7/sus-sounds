@@ -42,6 +42,7 @@ public:
     static BoardParams defaultBoard();   // the baseline starting board (for Revert)
     std::atomic<float> ballNX{ 0.5f }, ballNY{ 1.0f };  // normalized ball position (lock-free)
     std::atomic<float> ballR{ 0.03f };                  // live ball radius (board units) for the GUI
+    std::atomic<float> boardW{ 1.0f };                  // live board width for the GUI (aspect + normalization)
 
     // GUI thread: enqueue a single live peg edit. The audio thread applies it to the
     // running physics next block (no re-init -> the ball keeps flowing).

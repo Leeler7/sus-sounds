@@ -59,17 +59,7 @@ void PhysicsWorld::init(uint64_t seed, const BoardParams& params) {
     wd.maximumLinearSpeed = speedCapForGravity(p_.gravity, p_.topY);
     world_ = b2CreateWorld(&wd);
 
-    // Side walls: static segments, NO contact events (wall bounces are not taps).
-    {
-        b2BodyDef bd = b2DefaultBodyDef();
-        b2BodyId walls = b2CreateBody(world_, &bd);
-        b2ShapeDef sd = b2DefaultShapeDef();
-        sd.material.restitution = p_.restitution;
-        b2Segment left  = { b2Vec2{ 0.0f, 0.0f },      b2Vec2{ 0.0f, p_.topY } };
-        b2Segment right = { b2Vec2{ p_.width, 0.0f },  b2Vec2{ p_.width, p_.topY } };
-        b2CreateSegmentShape(walls, &sd, &left);
-        b2CreateSegmentShape(walls, &sd, &right);
-    }
+    createWalls();
 
     // Pegs: static circles WITH contact events on (ball-peg contact -> tap event).
     for (int i = 0; i < p_.pegCount; ++i)
@@ -98,6 +88,30 @@ void  PhysicsWorld::setGravity(float g) {
         b2World_SetGravity(world_, b2Vec2{ 0.0f, -g });
         b2World_SetMaximumLinearSpeed(world_, speedCapForGravity(g, p_.topY));  // keep the cap tied to gravity
     }
+}
+
+void PhysicsWorld::createWalls() {
+    // Side walls: static segments, NO contact events (wall bounces are not taps).
+    b2BodyDef bd = b2DefaultBodyDef();
+    wallBody_ = b2CreateBody(world_, &bd);
+    b2ShapeDef sd = b2DefaultShapeDef();
+    sd.material.restitution = p_.restitution;
+    b2Segment left  = { b2Vec2{ 0.0f, 0.0f },     b2Vec2{ 0.0f, p_.topY } };
+    b2Segment right = { b2Vec2{ p_.width, 0.0f }, b2Vec2{ p_.width, p_.topY } };
+    b2CreateSegmentShape(wallBody_, &sd, &left);
+    b2CreateSegmentShape(wallBody_, &sd, &right);
+}
+
+void PhysicsWorld::setWidth(float w) {
+    if (w < 0.3f) w = 0.3f;                              // floor: keep the board playable
+    if (!inited_) { p_.width = w; return; }
+    if (std::fabs(w - p_.width) < 1e-4f) return;         // unchanged
+    p_.width = w;
+    b2DestroyBody(wallBody_);                            // rebuild the walls at the new width (ball kept)
+    createWalls();
+    // keep the drop point inside the new bounds so the ball never spawns outside a wall
+    if (p_.dropX > w - p_.ballRadius) p_.dropX = w - p_.ballRadius;
+    if (p_.dropX < p_.ballRadius)     p_.dropX = p_.ballRadius;
 }
 
 void PhysicsWorld::createPegBody(int i) {

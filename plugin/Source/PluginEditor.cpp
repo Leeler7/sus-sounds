@@ -61,6 +61,7 @@ PlinkoAudioProcessorEditor::PlinkoAudioProcessorEditor(PlinkoAudioProcessor& p)
 
     // Shape
     addKnob(gravity_,    pid::gravity,    "Gravity");
+    addKnob(boardWidth_, pid::boardWidth, "Width");
     addKnob(ballSize_,   pid::ballSize,   "Ball Size");
     addKnob(ballBounce_, pid::ballBounce, "Ball Bounce");
 
@@ -86,7 +87,7 @@ PlinkoAudioProcessorEditor::PlinkoAudioProcessorEditor(PlinkoAudioProcessor& p)
 
     // Master
     addKnob(tone_,   pid::tone,     "Tone");
-    addKnob(width_,  pid::panWidth, "Width");
+    addKnob(width_,  pid::panWidth, "Stereo");
     addKnob(dryWet_, pid::dryWet,   "Dry/Wet");
     addKnob(level_,  pid::level,    "Level");
 
@@ -131,7 +132,7 @@ void PlinkoAudioProcessorEditor::resized() {
     revertBtn_.setBounds(top.removeFromLeft(70).reduced(2));
 
     auto shape = r.removeFromTop(82);   // Shape section
-    layRow(shape, { &gravity_, &ballSize_, &ballBounce_ });
+    layRow(shape, { &gravity_, &boardWidth_, &ballSize_, &ballBounce_ });
 
     auto master = r.removeFromBottom(92); // Master section
     layRow(master, { &tone_, &width_, &dryWet_, &level_ });

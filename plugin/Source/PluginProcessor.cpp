@@ -5,10 +5,7 @@ PlinkoAudioProcessor::PlinkoAudioProcessor()
     : AudioProcessor(BusesProperties()
         .withInput("Input", juce::AudioChannelSet::stereo(), true)
         .withOutput("Output", juce::AudioChannelSet::stereo(), true)) {
-    // Clean starting board: ~half as many pegs, small, all plain delay pegs.
-    // (The user builds it up via the GUI; reverb/bumper pegs are made by editing.)
-    makeStaggeredBoard(board_, 7, 5);
-    board_.pegRadius = 0.011f;   // ~50% bigger than before (readable after the aspect fix)
+    board_ = defaultBoard();
     ev_.reserve(512);
     hits_.reserve(512);
     pendingEdits_.reserve(256);
@@ -19,6 +16,13 @@ void PlinkoAudioProcessor::prepareToPlay(double sampleRate, int) {
     sr_ = sampleRate;
     physics_.init(kSeed, board_);
     engine_.prepare(sampleRate, ep_);
+}
+
+BoardParams PlinkoAudioProcessor::defaultBoard() {
+    BoardParams b;
+    makeStaggeredBoard(b, 7, 5);    // ~half-density, alternating delay/reverb rows
+    b.pegRadius = 0.011f;
+    return b;
 }
 
 void PlinkoAudioProcessor::pushEdit(const Edit& e) {
@@ -54,6 +58,7 @@ void PlinkoAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
                     case EditType::SetType: physics_.setPegType(e.idx, e.pegType); break;
                     case EditType::SetDrop: physics_.setDropPoint(e.x, e.y); break;
                     case EditType::Clear:   physics_.clearPegs(); break;
+                    case EditType::Reset:   board_ = defaultBoard(); physics_.init(kSeed, board_); break;
                 }
             }
             applyBuf_.clear();

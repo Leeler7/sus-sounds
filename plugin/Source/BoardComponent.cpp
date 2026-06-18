@@ -86,6 +86,14 @@ void BoardComponent::clearAllPegs() {
     repaint();
 }
 
+void BoardComponent::revertToDefault() {
+    board_ = PlinkoAudioProcessor::defaultBoard();
+    PlinkoAudioProcessor::Edit ed;
+    ed.type = PlinkoAudioProcessor::EditType::Reset;
+    proc_.pushEdit(ed);
+    repaint();
+}
+
 void BoardComponent::eraseAt(int i) {
     PlinkoAudioProcessor::Edit ed;
     ed.type = PlinkoAudioProcessor::EditType::Delete;

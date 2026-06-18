@@ -20,7 +20,11 @@ inline juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout
     auto add = [&](const char* id, const char* name, NormalisableRange<float> r, float def) {
         p.push_back(std::make_unique<AudioParameterFloat>(ParameterID{ id, 1 }, name, r, def));
     };
-    add(pid::gravity,     "Gravity",      NormalisableRange<float>(3.0f, 50.0f),      22.0f);  // 3 = moon/light .. 50 = very strong
+    {   // Gravity: Earth (~10) sits at NOON; far-left = very floaty, far-right = very strong.
+        NormalisableRange<float> g(1.0f, 50.0f);
+        g.setSkewForCentre(10.0f);
+        p.push_back(std::make_unique<AudioParameterFloat>(ParameterID{ pid::gravity, 1 }, "Gravity", g, 10.0f));
+    }
     add(pid::feedback,    "Feedback",     NormalisableRange<float>(0.0f, 0.95f),       0.62f);
     add(pid::delayMix,    "Delay Mix",    NormalisableRange<float>(0.0f, 1.0f),        0.5f);
     add(pid::reverbMix,   "Reverb Mix",   NormalisableRange<float>(0.0f, 1.0f),        0.45f);

@@ -31,6 +31,10 @@ PlinkoAudioProcessorEditor::PlinkoAudioProcessorEditor(PlinkoAudioProcessor& p)
     addAndMakeVisible(clearBtn_);
     clearBtn_.setButtonText("Clear");
     clearBtn_.onClick = [this] { board_.clearAllPegs(); };
+
+    addAndMakeVisible(revertBtn_);
+    revertBtn_.setButtonText("Revert");
+    revertBtn_.onClick = [this] { board_.revertToDefault(); };
     addKnob(gravity_,     pid::gravity,     "Gravity");
     addKnob(feedback_,    pid::feedback,    "Feedback");
     addKnob(delayMix_,    pid::delayMix,    "Delay");
@@ -55,6 +59,7 @@ void PlinkoAudioProcessorEditor::resized() {
     auto topStrip = r.removeFromTop(30);
     playStop_.setBounds(topStrip.removeFromLeft(90).reduced(4, 4));
     clearBtn_.setBounds(topStrip.removeFromLeft(80).reduced(4, 4));
+    revertBtn_.setBounds(topStrip.removeFromLeft(80).reduced(4, 4));
     board_.setBounds(r.reduced(8));
 
     Knob* ks[] = { &gravity_, &feedback_, &delayMix_, &reverbMix_, &reverbDecay_, &tone_, &width_, &dryWet_, &level_ };

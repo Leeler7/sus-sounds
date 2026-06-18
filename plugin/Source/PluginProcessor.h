@@ -38,11 +38,12 @@ public:
 
     // Read-only access for the editor.
     const BoardParams& board() const { return board_; }
+    static BoardParams defaultBoard();   // the baseline starting board (for Revert)
     std::atomic<float> ballNX{ 0.5f }, ballNY{ 1.0f };  // normalized ball position (lock-free)
 
     // GUI thread: enqueue a single live peg edit. The audio thread applies it to the
     // running physics next block (no re-init -> the ball keeps flowing).
-    enum class EditType { Add, Move, Delete, SetType, SetDrop, Clear };
+    enum class EditType { Add, Move, Delete, SetType, SetDrop, Clear, Reset };
     struct Edit { EditType type; int idx = 0; float x = 0, y = 0, rest = 0.5f; int pegType = 0; };
     void pushEdit(const Edit& e);
 

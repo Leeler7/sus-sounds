@@ -111,15 +111,17 @@ context to pick up cold.
 
 ## GUI follow-ups
 
-### Peg Parameter Interface — BRUSH panels (left=delay, right=reverb) — user request 2026-06-18
-- **What:** Use the side real-estate: a **delay-peg settings panel on the LEFT**, a
-  **reverb-peg settings panel on the RIGHT**. These set the "brush" for **newly placed** pegs
-  (NOT already-placed ones): bounce (restitution), size, and per-type sound params (pitch
-  range, filter, etc.). Placing a peg uses the active side's settings.
-- **Why:** bounce/size are per-peg in the data model but the GUI can't set them yet (new pegs
-  default to bounce 0.5, global size). This is how the player shapes a board.
-- **Note:** requires per-peg SIZE (today pegRadius is global — make it per-peg, like pegRest).
-- **Priority:** P2.
+### UI reorg into SECTIONS (the big GUI build) — user request 2026-06-18
+Reorganize the editor into clear sections instead of one knob row:
+- **Shape settings (the ball):** size, **bounce/springiness** (ball restitution — separate from
+  peg bounce), and later alternate shapes.
+- **Delay-peg settings (left):** the "brush" for newly placed delay pegs — bounce, size, and
+  delay-specific sound params. Affects pegs being PLACED, not existing ones.
+- **Reverb-peg settings (right):** same, for reverb pegs.
+- **Master:** Dry/Wet, Tone, Level (and global delay/reverb mix, feedback, reverb size).
+- **Notes:** needs per-peg SIZE (today pegRadius is global -> make per-peg like pegRest) and a
+  ball-restitution param. Brush model: placing a peg uses the active side's settings.
+- **Priority:** P2 — the next major build.
 
 ### Multi-select + right-click menu — user request 2026-06-18
 - **What:** A hotkey/drag to multi-select pegs, then a right-click context menu:

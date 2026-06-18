@@ -89,6 +89,26 @@ context to pick up cold.
   per-loop seeded vx for variety across loops.
 - **Priority:** P2 (do alongside the audio engine, T7-ish).
 
+## Sound engine expansions
+
+### Multiple delay & reverb TYPES (sound character) — user request 2026-06-17
+- **Why:** the v1 engine has ONE delay (clean digital feedback line) + ONE reverb (basic
+  Schroeder), which sounds "digital"/metallic. Character is core to the product's appeal;
+  users will want to pick the flavor. (User flagged the wet render sounding very digital.)
+- **Reverb types (selectable):** current basic Schroeder → add **Room, Hall, Cathedral**
+  (a size/decay/pre-delay family), **Plate**, and **Shimmer** (pitch-shifted feedback for the
+  octave-up wash).
+- **Delay types (selectable):** current clean **Digital** → add **Analogue/BBD** (filtered +
+  gently saturated feedback so repeats darken/degrade), **Tape echo** (wow/flutter + saturation
+  + filtering), **Ping-pong**.
+- **Delay time / grid:** straight, **dotted** (dotted-8th = the classic rhythmic delay),
+  **triplet**, and free (ms / note value). Currently fixed at an eighth note.
+- **Architecture:** make Delay and Reverb pluggable modules behind a type selector (global
+  Delay Type + Reverb Type macros); the per-peg delay-vs-reverb routing stays as-is. Quality
+  reverb (esp. shimmer/cathedral) is non-trivial DSP — evaluate proven algorithms/libs
+  (FDN reverbs, Dattorro plate, Freeverb family) rather than hand-rolling from scratch.
+- **Priority:** P2. Best done once the JUCE shell + GUI exist so types are A/B-able by ear.
+
 ## Open product questions to revisit
 
 - **Transport-stopped behavior:** when the DAW transport stops, should the ball freeze or

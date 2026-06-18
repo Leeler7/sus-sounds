@@ -240,6 +240,12 @@ self-clocking, §5).
 So: every hit is fast-attack; delay pegs decay fast (rhythm), reverb pegs decay long (bloom);
 it's discrete additive events, not knobs ramping.
 
+**Delay/reverb are currently single minimal algorithms** (clean digital feedback delay +
+basic Schroeder reverb) and sound "digital" by design — placeholders. Build the delay and
+reverb as **pluggable modules behind a type selector**; selectable character types (reverb:
+room/hall/cathedral/plate/shimmer; delay: digital/analogue/tape/ping-pong; timing:
+straight/dotted/triplet) are a planned expansion — see BACKLOG "Sound engine expansions".
+
 ## 6. Plugin state vs automatable parameters (review gap — resolved)
 
 A 128-peg board × 5 properties would be ~640 parameters; the VST3 parameter model and most

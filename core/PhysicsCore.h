@@ -38,8 +38,8 @@ struct BoardParams {
     float dropX = 0.42f;      // OFF the peg columns/gaps: a perfectly symmetric drop would
                               // balance on the apex peg forever (no asymmetry to deflect it)
     float dropY = 1.33f;
-    float initialVx = 0.6f;   // small fixed sideways velocity at spawn -> breaks symmetry,
-                              // guarantees a cascade (deterministic: same loop every time)
+    float initialVx = 0.0f;   // no sideways launch -> every drop is identical (down from dropX);
+                              // the off-center dropX already breaks symmetry for a cascade
     float exitY = 0.04f;      // ball below this = exited -> respawn
     float energyFloor = 0.05f;// below this speed = "slow"
     float nudge = 0.8f;       // desired horizontal velocity kick when genuinely stuck (m/s)

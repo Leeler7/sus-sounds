@@ -22,19 +22,25 @@ inline juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout
     auto add = [&](const char* id, const char* name, NormalisableRange<float> r, float def) {
         p.push_back(std::make_unique<AudioParameterFloat>(ParameterID{ id, 1 }, name, r, def));
     };
+    // Same, but skews the range so the default value sits at NOON (slider centre).
+    auto addSkew = [&](const char* id, const char* name, float lo, float hi, float def) {
+        NormalisableRange<float> r(lo, hi);
+        r.setSkewForCentre(def);
+        p.push_back(std::make_unique<AudioParameterFloat>(ParameterID{ id, 1 }, name, r, def));
+    };
     {   // Gravity: Earth (~10) sits at NOON; far-left = very floaty, far-right = very strong.
         NormalisableRange<float> g(1.0f, 50.0f);
         g.setSkewForCentre(10.0f);
         p.push_back(std::make_unique<AudioParameterFloat>(ParameterID{ pid::gravity, 1 }, "Gravity", g, 10.0f));
     }
-    add(pid::ballSize,    "Ball Size",    NormalisableRange<float>(0.015f, 0.06f),     0.03f);
-    add(pid::ballBounce,  "Ball Bounce",  NormalisableRange<float>(0.0f, 2.0f),        1.0f);
-    add(pid::feedback,    "Feedback",     NormalisableRange<float>(0.0f, 0.95f),       0.62f);
-    add(pid::delayMix,    "Delay Mix",    NormalisableRange<float>(0.0f, 1.0f),        0.5f);
-    add(pid::reverbMix,   "Reverb Mix",   NormalisableRange<float>(0.0f, 1.0f),        0.45f);
-    add(pid::reverbDecay, "Reverb Size",  NormalisableRange<float>(0.5f, 0.95f),       0.85f);
-    add(pid::tone,        "Tone",         NormalisableRange<float>(0.0f, 1.0f),        0.5f);  // neutral
-    add(pid::panWidth,    "Width",        NormalisableRange<float>(0.0f, 1.0f),        1.0f);
+    addSkew(pid::ballSize, "Ball Size", 0.015f, 0.06f, 0.03f);   // default ball size at noon
+    add(pid::ballBounce,  "Ball Bounce",  NormalisableRange<float>(0.0f, 2.0f),        1.0f);  // 1 = noon
+    addSkew(pid::feedback, "Feedback", 0.0f, 0.95f, 0.62f);          // default at noon
+    add(pid::delayMix,    "Delay Mix",    NormalisableRange<float>(0.0f, 1.0f),        0.5f);  // noon
+    add(pid::reverbMix,   "Reverb Mix",   NormalisableRange<float>(0.0f, 1.0f),        0.5f);  // noon
+    addSkew(pid::reverbDecay, "Reverb Size", 0.5f, 0.95f, 0.85f);    // default at noon
+    add(pid::tone,        "Tone",         NormalisableRange<float>(0.0f, 1.0f),        0.5f);  // noon
+    add(pid::panWidth,    "Width",        NormalisableRange<float>(0.0f, 1.0f),        0.5f);  // noon (modulate wider/narrower)
     add(pid::dryWet,      "Dry/Wet",      NormalisableRange<float>(0.0f, 1.0f),        0.5f);  // half wet
     add(pid::level,       "Level",        NormalisableRange<float>(0.0f, 2.0f),        1.0f);  // unity at noon
     return { p.begin(), p.end() };

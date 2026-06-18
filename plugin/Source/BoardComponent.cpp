@@ -63,9 +63,9 @@ bool BoardComponent::addPeg(float bx, float by) {
     int n = board_.pegCount;
     board_.pegX[n] = bx;
     board_.pegY[n] = by;
-    board_.pegRest[n] = board_.restitution;
-    board_.pegType[n] = 0;          // (Phase 2: set by the active brush)
-    board_.pegRad[n] = board_.pegRadius;
+    board_.pegType[n] = brushType_;                  // active brush decides type...
+    board_.pegRest[n] = brushBounce_[brushType_];    // ...bounce...
+    board_.pegRad[n]  = brushSize_[brushType_];      // ...and size
     board_.pegCount = n + 1;
     return true;
 }

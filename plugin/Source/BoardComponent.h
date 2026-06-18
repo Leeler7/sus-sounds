@@ -19,6 +19,12 @@ public:
     void clearAllPegs();      // remove every peg (local + enqueue Clear edit)
     void revertToDefault();   // restore the baseline board
 
+    // Brush: properties applied to NEWLY placed pegs (existing pegs untouched).
+    void setBrushType(int t)              { brushType_ = t; }
+    void setBrushBounce(int type, float v){ brushBounce_[type & 1] = v; }
+    void setBrushSize(int type, float v)  { brushSize_[type & 1]  = v; }
+    int  brushType() const                { return brushType_; }
+
     void paint(juce::Graphics&) override;
     void mouseDown(const juce::MouseEvent&) override;
     void mouseDrag(const juce::MouseEvent&) override;
@@ -51,4 +57,7 @@ private:
     BoardParams board_;     // editable working copy (authoritative for drawing/editing)
     int dragIdx_ = -1;
     bool dragDrop_ = false; // dragging the start point (only while stopped)
+    int brushType_ = 0;                       // 0 = delay, 1 = reverb (for new pegs)
+    float brushBounce_[2] = { 0.5f, 0.5f };   // [delay, reverb] new-peg bounce
+    float brushSize_[2]   = { 0.011f, 0.011f };// [delay, reverb] new-peg size
 };

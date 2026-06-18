@@ -33,7 +33,7 @@ inline juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout
         g.setSkewForCentre(10.0f);
         p.push_back(std::make_unique<AudioParameterFloat>(ParameterID{ pid::gravity, 1 }, "Gravity", g, 10.0f));
     }
-    addSkew(pid::ballSize, "Ball Size", 0.015f, 0.06f, 0.03f);   // default ball size at noon
+    addSkew(pid::ballSize, "Ball Size", 0.015f, 0.06f, 0.045f);   // default ball size at noon
     add(pid::ballBounce,  "Ball Bounce",  NormalisableRange<float>(0.0f, 2.0f),        1.0f);  // 1 = noon
     addSkew(pid::feedback, "Feedback", 0.0f, 0.95f, 0.62f);          // default at noon
     add(pid::delayMix,    "Delay Mix",    NormalisableRange<float>(0.0f, 1.0f),        0.5f);  // noon

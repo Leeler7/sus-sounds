@@ -20,8 +20,9 @@ void PlinkoAudioProcessor::prepareToPlay(double sampleRate, int) {
 
 BoardParams PlinkoAudioProcessor::defaultBoard() {
     BoardParams b;
-    makeStaggeredBoard(b, 7, 5);    // ~half-density, alternating delay/reverb rows
-    b.pegRadius = 0.011f;
+    b.pegRadius  = 0.0225f;          // set BEFORE building so the staggered pegs use it (matches the
+    b.ballRadius = 0.045f;           // brush noon size) -- board pegs and new pegs are now equal
+    makeStaggeredBoard(b, 7, 5);     // ~half-density, alternating delay/reverb rows
     return b;
 }
 
@@ -124,6 +125,10 @@ void PlinkoAudioProcessor::getStateInformation(juce::MemoryBlock& dest) {
 }
 
 void PlinkoAudioProcessor::setStateInformation(const void* data, int size) {
+    // Standalone always opens at default settings (the app's own state save is ignored). A VST3 in
+    // a DAW still restores its saved session state normally.
+    if (wrapperType == wrapperType_Standalone)
+        return;
     if (auto xml = getXmlFromBinary(data, size))
         apvts.replaceState(juce::ValueTree::fromXml(*xml));
 }

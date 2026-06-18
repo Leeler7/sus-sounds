@@ -52,7 +52,7 @@ public:
     };
     void pushEdit(const Edit& e);
 
-    std::atomic<bool> running_{ true };  // false = ball parked at the (draggable) start point
+    std::atomic<bool> running_{ false };  // open STOPPED (ball parked at the draggable start point)
 
 private:
     BoardParams board_;

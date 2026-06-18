@@ -4,6 +4,14 @@
 
 static inline float clamp01(float v) { return v < 0.0f ? 0.0f : (v > 1.0f ? 1.0f : v); }
 
+// The fastest the ball could ever go on gravity alone: free-fall through the board height.
+// We cap the ball's speed here so bounce > 1 (powered bumpers) can never push it past the
+// scale the gravity knob sets -- no low-gravity runaway.
+static inline float speedCapForGravity(float g, float topY) {
+    float v = std::sqrt(2.0f * (g > 0.0f ? g : 0.0f) * topY);
+    return v < 0.1f ? 0.1f : v;
+}
+
 void makeStaggeredBoard(BoardParams& p, int rows, int cols) {
     int n = 0;
     for (int r = 0; r < rows && n < 128; ++r) {
@@ -43,10 +51,10 @@ void PhysicsWorld::init(uint64_t seed, const BoardParams& params) {
     // whole board is ~1 unit wide, so at low gravity slow contacts never bounced. Drop it low so
     // bounce behaves consistently at any gravity.
     wd.restitutionThreshold = 0.05f;
-    // Bounce > 1 ADDS energy (powered bumpers) and compounds hit-over-hit. Cap the ball's speed so
-    // that's a lively accent, not a runaway. Default is 400 (≈no cap); normal high-gravity play
-    // tops out around ~12, so 16 leaves bumper headroom while bounding the explosion.
-    wd.maximumLinearSpeed = 16.0f;
+    // Cap speed at the gravity-set free-fall speed (default is 400 = effectively no cap). Bounce > 1
+    // adds energy and compounds hit-over-hit; without this it runs away, worst at LOW gravity where
+    // the runaway speed dwarfs what the ball should be doing. Tying the cap to gravity fixes that.
+    wd.maximumLinearSpeed = speedCapForGravity(p_.gravity, p_.topY);
     world_ = b2CreateWorld(&wd);
 
     // Side walls: static segments, NO contact events (wall bounces are not taps).
@@ -82,7 +90,13 @@ PhysicsWorld::~PhysicsWorld() { shutdown(); }
 
 float PhysicsWorld::dbgBallY() { return b2Body_GetPosition(ball_).y; }
 float PhysicsWorld::dbgBallX() { return b2Body_GetPosition(ball_).x; }
-void  PhysicsWorld::setGravity(float g) { if (inited_) b2World_SetGravity(world_, b2Vec2{ 0.0f, -g }); }
+void  PhysicsWorld::setGravity(float g) {
+    p_.gravity = g;
+    if (inited_) {
+        b2World_SetGravity(world_, b2Vec2{ 0.0f, -g });
+        b2World_SetMaximumLinearSpeed(world_, speedCapForGravity(g, p_.topY));  // keep the cap tied to gravity
+    }
+}
 
 void PhysicsWorld::createPegBody(int i) {
     b2BodyDef bd = b2DefaultBodyDef();

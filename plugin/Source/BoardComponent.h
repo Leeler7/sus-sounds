@@ -1,22 +1,25 @@
 #pragma once
 #include <juce_gui_basics/juce_gui_basics.h>
+#include <vector>
 #include "PhysicsCore.h"
 
 class PlinkoAudioProcessor;
 
-// Interactive Plinko board: draws pegs (color-coded by type, bumpers highlighted) + the
-// live ball, and lets the user edit the board:
-//   left-click empty   -> add a peg (then drag to position)
-//   left-drag a peg     -> move it
-//   right-click a peg   -> delete it
-//   double-click a peg  -> toggle delay <-> reverb
-// Edits commit to the processor on mouse-up (which re-inits the live physics).
+// Interactive Plinko board. Single-peg editing + multi-select bulk editing.
+//   left-click empty    -> add a peg
+//   left-drag empty      -> marquee (rubber-band) select
+//   left-click a peg      -> move it (clears selection)
+//   shift+click a peg     -> toggle it in/out of the selection
+//   left-drag a selected peg -> move the whole selection together
+//   right-click in selection -> bulk context menu; right-click/drag elsewhere -> erase
+//   double-click a peg   -> toggle delay <-> reverb
+//   keys: Del = delete selection, Ctrl+D = duplicate, Ctrl+Z = undo, Esc = deselect, arrows = nudge
 class BoardComponent : public juce::Component, private juce::Timer {
 public:
     explicit BoardComponent(PlinkoAudioProcessor& p);
     ~BoardComponent() override;
 
-    void clearAllPegs();      // remove every peg (local + enqueue Clear edit)
+    void clearAllPegs();      // remove every peg (undoable)
     void revertToDefault();   // restore the baseline board
 
     // Brush: properties applied to NEWLY placed pegs (existing pegs untouched).
@@ -30,6 +33,7 @@ public:
     void mouseDrag(const juce::MouseEvent&) override;
     void mouseUp(const juce::MouseEvent&) override;
     void mouseDoubleClick(const juce::MouseEvent&) override;
+    bool keyPressed(const juce::KeyPress&) override;
 
 private:
     void timerCallback() override { repaint(); }
@@ -51,12 +55,35 @@ private:
     int  pegAt(float bx, float by) const;     // index of peg near (bx,by), or -1
     bool addPeg(float bx, float by);          // returns false if full / out of bounds (local only)
     void removePeg(int i);                    // local only
-    void eraseAt(int i);                      // delete peg i locally + enqueue the edit
+    void eraseAt(int i);                       // delete peg i locally + enqueue the edit
+
+    // Selection helpers
+    bool isSelected(int i) const;
+    void clearSelection() { sel_.clear(); }
+    void selectInMarquee(juce::Point<float> a, juce::Point<float> b, bool add);
+
+    // Bulk + undo plumbing
+    void pushBulk();     // enqueue a full-board BulkSet edit from the working copy
+    void pushUndo();     // snapshot board_ onto the undo stack (call BEFORE mutating)
+    void undoLast();
+    void showContextMenu(const juce::MouseEvent&);
+    void runMenuOp(int id);
+    void nudgeSelection(float dx, float dy);
 
     PlinkoAudioProcessor& proc_;
     BoardParams board_;     // editable working copy (authoritative for drawing/editing)
-    int dragIdx_ = -1;
-    bool dragDrop_ = false; // dragging the start point (only while stopped)
+
+    std::vector<int> sel_;          // selected peg indices (into board_)
+    int dragIdx_ = -1;              // single peg being moved
+    bool draggingSel_ = false;      // moving the whole selection
+    bool dragDrop_ = false;         // dragging the start point (only while stopped)
+    bool marquee_ = false;          // rubber-band selecting
+    juce::Point<float> downPos_, marqA_, marqB_, lastDrag_;
+    bool gestureMoved_ = false;     // did this drag actually change anything?
+    BoardParams preState_;          // board_ snapshot captured at gesture start (for undo)
+
+    std::vector<BoardParams> undo_; // undo stack (capped)
+
     int brushType_ = 0;                       // 0 = delay, 1 = reverb (for new pegs)
     float brushBounce_[2] = { 1.0f, 1.0f };   // [delay, reverb] new-peg bounce (1 = neutral)
     float brushSize_[2]   = { 0.011f, 0.011f };// [delay, reverb] new-peg size

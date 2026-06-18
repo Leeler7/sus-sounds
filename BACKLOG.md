@@ -130,12 +130,40 @@ Reorganize the editor into clear sections instead of one knob row:
   ball-restitution param. Brush model: placing a peg uses the active side's settings.
 - **Priority:** P2 — the next major build.
 
-### Multi-select + right-click menu — user request 2026-06-18
-- **What:** A hotkey/drag to multi-select pegs, then a right-click context menu:
-  (1) Change type, (2) Increase size, (3) Decrease size, (4) Delete selected.
-- **Depends on:** per-peg size (same as above). Selection state in BoardComponent; edits sent
-  as a batch through the existing edit queue.
-- **Priority:** P2.
+### Multi-select + right-click menu — DESIGN LOCKED 2026-06-18 (/plan-design-review)
+The designer's-eye review resolved the input-model conflicts, selection feedback, undo, and
+the musical operation set. Building this on `v0.2-dev`.
+
+**Input map (rewrite — every gesture was already taken):**
+- Left-click empty → add peg (unchanged). Left-click peg (no selection) → move it (unchanged).
+- **Left-drag on empty → marquee select** (rubber-band rect; the only free gesture).
+- **Shift+click peg → toggle** in/out of selection.
+- **Left-drag a selected peg → move the whole selection** together.
+- **Right-click inside a selection → context menu**; right-click/drag elsewhere → erase (kept).
+- **Esc** deselect · **Delete** remove selection · **Ctrl+D** duplicate · **Ctrl+Z** undo · arrows nudge.
+
+**Selection feedback:** white halo ring on each selected peg; live count baked into every menu
+item ("Delete (12)"). Menu position clamped to stay on-board.
+
+**v1 operation set (all chosen):**
+- **Core edits:** Change type (Delay/Reverb/Flip), Grow, Shrink, Bounce +, Bounce -, Duplicate,
+  Delete. Grow/shrink/bounce are RELATIVE nudges (×/± a step) so per-peg variety survives.
+- **Mirror horizontal:** reflect selection across board center (x -> width-x). Because x = pan,
+  this makes an instant stereo-balanced answer. Signature move.
+- **Apply current brush to selection:** conform selected pegs to the active Delay/Reverb brush
+  (type+bounce+size). Reuses the brush as the bulk editor.
+- **Align & distribute:** snap selection to a shared row (avg Y) or column (avg X), and space
+  evenly between extremes. Builds clean scale runs / arpeggios.
+
+**Undo (Ctrl+Z) — chosen safety net:** an editor-side undo stack records each editor action
+(add / move / delete / each bulk op) so one Ctrl+Z reverts a whole bulk operation, not just
+deletes. Snapshots the peg arrays before each action; replays via the existing edit queue
+(a full-board Reset edit is the simplest reliable apply — or add a BulkSet edit type).
+
+**Touch points:** BoardComponent (selection set, marquee, input rewrite, juce::PopupMenu,
+keyboard via keyPressed + setWantsKeyboardFocus), PluginProcessor Edit queue (bulk/undo apply),
+PhysicsCore (bulk rebuild on Reset/BulkSet). Per-peg size already exists.
+- **Priority:** P1 (next build).
 
 ## Open product questions to revisit
 

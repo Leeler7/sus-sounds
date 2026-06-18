@@ -162,6 +162,23 @@ void PhysicsWorld::clearPegs() {
     p_.pegCount = 0;
 }
 
+void PhysicsWorld::setPegs(const BoardParams& src) {
+    // Copy just the peg data (positions/sizes/bounce/types); leave the ball, walls, gravity,
+    // drop point, RNG and loop state alone so a bulk edit doesn't restart the groove.
+    auto copyPegs = [&] {
+        p_.pegCount = src.pegCount;
+        for (int i = 0; i < src.pegCount; ++i) {
+            p_.pegX[i] = src.pegX[i];   p_.pegY[i] = src.pegY[i];
+            p_.pegRest[i] = src.pegRest[i]; p_.pegRad[i] = src.pegRad[i];
+            p_.pegType[i] = src.pegType[i];
+        }
+    };
+    if (!inited_) { copyPegs(); return; }
+    for (int i = 0; i < p_.pegCount; ++i) b2DestroyBody(pegBody_[i]);  // ball untouched
+    copyPegs();
+    for (int i = 0; i < p_.pegCount; ++i) createPegBody(i);
+}
+
 void PhysicsWorld::holdAtDrop() {
     if (!inited_) return;
     b2Body_SetTransform(ball_, b2Vec2{ p_.dropX, p_.dropY }, b2MakeRot(0.0f));

@@ -59,6 +59,7 @@ void PlinkoAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
                     case EditType::SetDrop: physics_.setDropPoint(e.x, e.y); break;
                     case EditType::Clear:   physics_.clearPegs(); break;
                     case EditType::Reset:   board_ = defaultBoard(); physics_.init(kSeed, board_); break;
+                    case EditType::BulkSet: if (e.snapshot) physics_.setPegs(*e.snapshot); break;
                 }
             }
             applyBuf_.clear();

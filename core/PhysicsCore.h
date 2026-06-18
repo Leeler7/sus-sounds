@@ -95,6 +95,8 @@ public:
     void setDropPoint(float x, float y);   // where the ball starts
     void holdAtDrop();                     // park the ball at the drop point (used while stopped)
     void clearPegs();                      // remove all pegs (ball keeps running)
+    void setPegs(const BoardParams& src);  // rebuild ALL pegs from src; the ball is preserved
+                                           // (keeps flowing) -- used for bulk edits + undo
     int  pegCount() const { return p_.pegCount; }
     const BoardParams& boardParams() const { return p_; }
 

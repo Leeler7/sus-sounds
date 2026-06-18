@@ -45,13 +45,17 @@ void SoundEngine::prepare(double sampleRate, const EngineParams& ep) {
     dlen_ = (int)(delaySec * sr_) + 1;
     for (int b = 0; b < kNumBuses; ++b) { dL_[b].assign(dlen_, 0.0f); dR_[b].assign(dlen_, 0.0f); dpos_[b] = 0; }
 
-    const int cr[4] = { 1557, 1617, 1491, 1422 };  // classic Schroeder comb lengths @44.1k
+    const int cr[4] = { 1557, 1617, 1491, 1422 };  // classic Schroeder comb lengths @44.1k (Hall = base)
     const int ar[2] = { 225, 556 };
-    for (int i = 0; i < 4; ++i) combLen_[i] = (int)(cr[i] * sr_ / 44100.0);
-    for (int i = 0; i < 2; ++i) apLen_[i]  = (int)(ar[i] * sr_ / 44100.0);
+    for (int i = 0; i < 4; ++i) {
+        combLen_[i]    = (int)(cr[i] * sr_ / 44100.0);
+        combMaxLen_[i] = (int)(cr[i] * 1.7 * sr_ / 44100.0) + 1;   // Cathedral is the largest size
+    }
+    for (int i = 0; i < 2; ++i) apLen_[i] = (int)(ar[i] * sr_ / 44100.0);
     for (int b = 0; b < kNumBuses; ++b) {
-        for (int i = 0; i < 4; ++i) { comb_[b][i].assign(combLen_[i], 0.0f); combPos_[b][i] = 0; }
+        for (int i = 0; i < 4; ++i) { comb_[b][i].assign(combMaxLen_[i], 0.0f); combPos_[b][i] = 0; combLp_[b][i] = 0.0f; }
         for (int i = 0; i < 2; ++i) { ap_[b][i].assign(apLen_[i], 0.0f);  apPos_[b][i] = 0; }
+        dFbLpL_[b] = dFbLpR_[b] = 0.0f;
     }
 }
 
@@ -91,12 +95,31 @@ void SoundEngine::startVoice(const Hit& h) {
 }
 
 float SoundEngine::reverbProcess(int bus, float in) {
+    // Reverb type = a (size, decay, HF-damping) family on the Schroeder bank.
+    float sizeScale, decayMul, damp;
+    switch (ep_.reverbType[bus]) {
+        case 0: sizeScale = 0.6f; decayMul = 0.85f; damp = 0.45f; break;  // Room: small, dark
+        default:
+        case 1: sizeScale = 1.0f; decayMul = 1.0f;  damp = 0.20f; break;  // Hall
+        case 2: sizeScale = 1.7f; decayMul = 1.08f; damp = 0.15f; break;  // Cathedral: large, long
+        case 3: sizeScale = 0.5f; decayMul = 1.0f;  damp = 0.0f;  break;  // Plate: small, dense, bright
+    }
+    float decay = ep_.reverbDecay[bus] * decayMul;
+    if (decay > 0.97f) decay = 0.97f;
+
     float out = 0.0f;
     for (int i = 0; i < 4; ++i) {
-        float y = comb_[bus][i][combPos_[bus][i]];
+        int len = (int)(combLen_[i] * sizeScale);
+        if (len < 1) len = 1; else if (len > combMaxLen_[i]) len = combMaxLen_[i];
+        int pos = combPos_[bus][i];
+        if (pos >= len) pos = 0;                   // size shrank: keep the index in range
+        float y = comb_[bus][i][pos];
         out += y;
-        comb_[bus][i][combPos_[bus][i]] = in + y * ep_.reverbDecay[bus];
-        if (++combPos_[bus][i] >= combLen_[i]) combPos_[bus][i] = 0;
+        float fb = in + y * decay;
+        if (damp > 0.0f) { combLp_[bus][i] += damp * (fb - combLp_[bus][i]); fb = combLp_[bus][i]; }  // HF damping
+        comb_[bus][i][pos] = fb;
+        if (++pos >= len) pos = 0;
+        combPos_[bus][i] = pos;
     }
     out *= 0.25f;
     for (int i = 0; i < 2; ++i) {
@@ -160,8 +183,25 @@ void SoundEngine::process(float* outL, float* outR, int n, const ScheduledHit* h
         float wetL = 0.0f, wetR = 0.0f;
         for (int b = 0; b < kNumBuses; ++b) {
             float dlo = dL_[b][dpos_[b]], dro = dR_[b][dpos_[b]];
-            dL_[b][dpos_[b]] = delInL[b] + dlo * ep_.feedback[b];
-            dR_[b][dpos_[b]] = delInR[b] + dro * ep_.feedback[b];
+            const float fb = ep_.feedback[b];
+            const int   dt = ep_.delayType[b];
+            float fbL, fbR;
+            if (dt == 3) {                          // Ping-pong: feedback crosses L<->R
+                fbL = dro * fb; fbR = dlo * fb;
+            } else {
+                fbL = dlo * fb; fbR = dro * fb;
+                if (dt == 1 || dt == 2) {           // Analogue / Tape: lowpass the feedback (repeats darken)
+                    const float c = 0.35f;
+                    dFbLpL_[b] += c * (fbL - dFbLpL_[b]); fbL = dFbLpL_[b];
+                    dFbLpR_[b] += c * (fbR - dFbLpR_[b]); fbR = dFbLpR_[b];
+                }
+                if (dt == 2) {                      // Tape: soft saturation in the feedback (grit/compression)
+                    fbL = std::tanh(fbL * 1.5f) * 0.667f;
+                    fbR = std::tanh(fbR * 1.5f) * 0.667f;
+                }
+            }
+            dL_[b][dpos_[b]] = delInL[b] + fbL;
+            dR_[b][dpos_[b]] = delInR[b] + fbR;
             if (++dpos_[b] >= dlen_) dpos_[b] = 0;
             float rv = reverbProcess(b, revIn[b]);
             wetL += dlo * ep_.delayMix[b] + rv * ep_.reverbMix[b];

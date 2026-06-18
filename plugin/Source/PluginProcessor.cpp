@@ -11,6 +11,8 @@ PlinkoAudioProcessor::PlinkoAudioProcessor()
         busDelayMix_[b]    = 0.5f;
         busReverbDecay_[b] = 0.85f;
         busReverbMix_[b]   = 0.5f;
+        busDelayType_[b]   = 0;   // Digital
+        busReverbType_[b]  = 1;   // Hall
     }
     ev_.reserve(512);
     hits_.reserve(512);
@@ -123,6 +125,8 @@ void PlinkoAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
         ep_.delayMix[b]    = busDelayMix_[b].load(std::memory_order_relaxed);
         ep_.reverbMix[b]   = busReverbMix_[b].load(std::memory_order_relaxed);
         ep_.reverbDecay[b] = busReverbDecay_[b].load(std::memory_order_relaxed);
+        ep_.delayType[b]   = busDelayType_[b].load(std::memory_order_relaxed);
+        ep_.reverbType[b]  = busReverbType_[b].load(std::memory_order_relaxed);
     }
     ep_.tone        = apvts.getRawParameterValue(pid::tone)->load();
     ep_.panWidth    = apvts.getRawParameterValue(pid::panWidth)->load();

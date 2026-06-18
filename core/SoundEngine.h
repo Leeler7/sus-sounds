@@ -19,6 +19,8 @@ struct EngineParams {
     float delayMix   [kNumBuses] = { 0.5f,  0.5f,  0.5f,  0.5f  };  // per-bus wet delay level
     float reverbMix  [kNumBuses] = { 0.5f,  0.5f,  0.5f,  0.5f  };  // per-bus wet reverb level
     float reverbDecay[kNumBuses] = { 0.85f, 0.85f, 0.85f, 0.85f };  // per-bus reverb size (comb feedback)
+    int   delayType  [kNumBuses] = { 0, 0, 0, 0 };  // 0 Digital, 1 Analogue, 2 Tape, 3 Ping-pong
+    int   reverbType [kNumBuses] = { 1, 1, 1, 1 };  // 0 Room, 1 Hall, 2 Cathedral, 3 Plate (Hall = default)
     float dryWet     = 0.5f;   // 0 = dry (tones/input), 1 = fully wet (delay+reverb)
     float panWidth   = 1.0f;   // 1 = full width, 0 = mono-center
     int   rootMidi   = 57;     // A3
@@ -83,6 +85,8 @@ private:
     bool  useInput_ = false;
 
     std::vector<float> dL_[kNumBuses], dR_[kNumBuses];  int dlen_ = 1, dpos_[kNumBuses]{};   // per-bus stereo delay
-    std::vector<float> comb_[kNumBuses][4];  int combLen_[4]{}, combPos_[kNumBuses][4]{};    // per-bus reverb combs
+    float dFbLpL_[kNumBuses]{}, dFbLpR_[kNumBuses]{};   // delay feedback lowpass state (analogue/tape darken)
+    std::vector<float> comb_[kNumBuses][4];  int combLen_[4]{}, combMaxLen_[4]{}, combPos_[kNumBuses][4]{};  // combs (allocated at max size)
     std::vector<float> ap_[kNumBuses][2];    int apLen_[2]{},  apPos_[kNumBuses][2]{};       // per-bus allpasses
+    float combLp_[kNumBuses][4]{};            // reverb comb HF-damping state (room/hall darkening)
 };

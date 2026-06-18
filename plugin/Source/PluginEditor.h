@@ -32,10 +32,12 @@ private:
 
     Knob gravity_, boardWidth_, ballSize_, ballBounce_;    // Shape
     juce::TextButton delayBrushBtn_;                        // Delay panel
+    juce::ComboBox delayTypeBox_;                           // per-bus delay type
     juce::Slider delayBounce_, delaySize_;  juce::Label delayBounceL_, delaySizeL_;
     juce::Slider delaySend_, delayLevel_, delayTone_;  juce::Label delaySendL_, delayLevelL_, delayToneL_;
     juce::Slider feedback_, delayMix_;       juce::Label feedbackL_, delayMixL_;     // per-bus (active bus)
     juce::TextButton reverbBrushBtn_;                       // Reverb panel
+    juce::ComboBox reverbTypeBox_;                          // per-bus reverb type
     juce::Slider reverbBounce_, reverbSize_; juce::Label reverbBounceL_, reverbSizeL_;
     juce::Slider reverbSend_, reverbLevel_, reverbTone_;  juce::Label reverbSendL_, reverbLevelL_, reverbToneL_;
     juce::Slider reverbDecay_, reverbMix_;   juce::Label reverbDecayL_, reverbMixL_; // per-bus (active bus)

@@ -91,7 +91,18 @@ context to pick up cold.
 
 ## Sound engine expansions
 
-### Multiple delay & reverb TYPES (sound character) — user request 2026-06-17
+### Delay & reverb TYPES — Phase 1 (character set) DONE on v0.2-dev 2026-06-18
+- Per-bus **Delay Type** (Digital / Analogue / Tape / Ping-pong) + **Reverb Type** (Room / Hall /
+  Cathedral / Plate), as ComboBoxes in each panel header; non-APVTS atomics busDelayType_/busReverbType_.
+- Delay types modify the feedback path: Analogue/Tape lowpass it (darken repeats), Tape adds tanh
+  saturation, Ping-pong crosses L<->R. Reverb types = (sizeScale, decayMul, HF-damp) on the Schroeder
+  bank; combs allocated at max (Cathedral 1.7x) and read at the type's active length. Defaults =
+  Digital / Hall (Hall ~ old reverb + light damping).
+- STILL TODO (Phase 2): **Shimmer** reverb (octave-up pitch-shifted feedback — needs a pitch-shifter)
+  and **per-bus delay TIME** (straight/dotted/triplet — needs a read-offset delay refactor; also
+  enables Tape wow/flutter). Tape currently = LP + saturation, no wow/flutter yet.
+
+### Multiple delay & reverb TYPES (sound character) — original request 2026-06-17 (superseded above)
 - **Why:** the v1 engine has ONE delay (clean digital feedback line) + ONE reverb (basic
   Schroeder), which sounds "digital"/metallic. Character is core to the product's appeal;
   users will want to pick the flavor. (User flagged the wet render sounding very digital.)

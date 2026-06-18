@@ -45,6 +45,7 @@ public:
     std::atomic<float> boardW{ 1.0f };                  // live board width for the GUI (aspect + normalization)
     // Per-bus effect character (GUI writes, audio reads). Non-APVTS: edited via the bus panel.
     std::atomic<float> busFeedback_[kNumBuses], busDelayMix_[kNumBuses], busReverbDecay_[kNumBuses], busReverbMix_[kNumBuses];
+    std::atomic<int>   busDelayType_[kNumBuses], busReverbType_[kNumBuses];  // 0..3 delay/reverb type per bus
 
     // GUI thread: enqueue a single live peg edit. The audio thread applies it to the
     // running physics next block (no re-init -> the ball keeps flowing).

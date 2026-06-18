@@ -1,5 +1,6 @@
 #include "PhysicsCore.h"
 #include <cmath>
+#include <cstdint>
 
 static inline float clamp01(float v) { return v < 0.0f ? 0.0f : (v > 1.0f ? 1.0f : v); }
 
@@ -52,18 +53,8 @@ void PhysicsWorld::init(uint64_t seed, const BoardParams& params) {
     }
 
     // Pegs: static circles WITH contact events on (ball-peg contact -> tap event).
-    for (int i = 0; i < p_.pegCount; ++i) {
-        b2BodyDef bd = b2DefaultBodyDef();
-        bd.position = b2Vec2{ p_.pegX[i], p_.pegY[i] };
-        b2BodyId peg = b2CreateBody(world_, &bd);
-        b2Circle c = { b2Vec2{ 0.0f, 0.0f }, p_.pegRadius };
-        pegInfo_[i] = p_.pegType[i];
-        b2ShapeDef sd = b2DefaultShapeDef();
-        sd.material.restitution = p_.pegRest[i];  // per-peg: > 1.0 = bumper (extra energy)
-        sd.enableContactEvents = true;
-        sd.userData = &pegInfo_[i];  // non-null userData = peg; points to its type (0/1)
-        b2CreateCircleShape(peg, &sd, &c);
-    }
+    for (int i = 0; i < p_.pegCount; ++i)
+        createPegBody(i);
 
     // Ball: dynamic circle. Contact events left off here; OR-semantics still fire ball-peg.
     {
@@ -97,6 +88,51 @@ float PhysicsWorld::dbgBallY() { return b2Body_GetPosition(ball_).y; }
 float PhysicsWorld::dbgBallX() { return b2Body_GetPosition(ball_).x; }
 void  PhysicsWorld::setGravity(float g) { if (inited_) b2World_SetGravity(world_, b2Vec2{ 0.0f, -g }); }
 
+void PhysicsWorld::createPegBody(int i) {
+    b2BodyDef bd = b2DefaultBodyDef();
+    bd.position = b2Vec2{ p_.pegX[i], p_.pegY[i] };
+    pegBody_[i] = b2CreateBody(world_, &bd);
+    b2Circle c = { b2Vec2{ 0.0f, 0.0f }, p_.pegRadius };
+    b2ShapeDef sd = b2DefaultShapeDef();
+    sd.material.restitution = p_.pegRest[i];                          // >1 = bumper
+    sd.enableContactEvents = true;
+    sd.userData = (void*)(intptr_t)(p_.pegType[i] + 1);              // non-null = peg; encodes type
+    pegShape_[i] = b2CreateCircleShape(pegBody_[i], &sd, &c);
+}
+
+bool PhysicsWorld::addPeg(float x, float y, float rest, int type) {
+    if (!inited_ || p_.pegCount >= 128) return false;
+    int i = p_.pegCount;
+    p_.pegX[i] = x; p_.pegY[i] = y; p_.pegRest[i] = rest; p_.pegType[i] = type;
+    createPegBody(i);
+    p_.pegCount = i + 1;
+    return true;
+}
+
+void PhysicsWorld::movePeg(int i, float x, float y) {
+    if (!inited_ || i < 0 || i >= p_.pegCount) return;
+    p_.pegX[i] = x; p_.pegY[i] = y;
+    b2Body_SetTransform(pegBody_[i], b2Vec2{ x, y }, b2MakeRot(0.0f));
+}
+
+void PhysicsWorld::removePeg(int i) {
+    if (!inited_ || i < 0 || i >= p_.pegCount) return;
+    b2DestroyBody(pegBody_[i]);
+    int last = p_.pegCount - 1;
+    if (i != last) {   // swap the last peg into slot i (keeps arrays compact)
+        p_.pegX[i] = p_.pegX[last]; p_.pegY[i] = p_.pegY[last];
+        p_.pegRest[i] = p_.pegRest[last]; p_.pegType[i] = p_.pegType[last];
+        pegBody_[i] = pegBody_[last]; pegShape_[i] = pegShape_[last];
+    }
+    p_.pegCount = last;
+}
+
+void PhysicsWorld::setPegType(int i, int type) {
+    if (!inited_ || i < 0 || i >= p_.pegCount) return;
+    p_.pegType[i] = type;
+    b2Shape_SetUserData(pegShape_[i], (void*)(intptr_t)(type + 1));
+}
+
 void PhysicsWorld::respawn() {
     ++loop_;
     // reseed deterministically from (baseSeed, loopIndex) so each loop is reproducible
@@ -126,7 +162,7 @@ void PhysicsWorld::stepOnce(std::vector<Collision>& out) {
         c.ny = clamp01(pos.y / p_.topY);
         c.energy = std::sqrt(vel.x * vel.x + vel.y * vel.y);
         c.loop = loop_;
-        c.type = *static_cast<int*>(pegUd);   // 0 = delay peg, 1 = reverb peg
+        c.type = (int)(intptr_t)pegUd - 1;   // userData encodes (type+1): 1->delay, 2->reverb
         out.push_back(c);
     }
 

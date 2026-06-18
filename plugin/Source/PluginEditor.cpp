@@ -25,10 +25,11 @@ PlinkoAudioProcessorEditor::PlinkoAudioProcessorEditor(PlinkoAudioProcessor& p)
     addKnob(reverbDecay_, pid::reverbDecay, "Size");
     addKnob(tone_,        pid::tone,        "Tone");
     addKnob(width_,       pid::panWidth,    "Width");
+    addKnob(dryWet_,      pid::dryWet,      "Dry/Wet");
     addKnob(level_,       pid::level,       "Level");
     setResizable(true, true);
-    setResizeLimits(560, 380, 1400, 1000);
-    setSize(760, 500);
+    setResizeLimits(620, 380, 1500, 1000);
+    setSize(820, 500);
 }
 
 void PlinkoAudioProcessorEditor::paint(juce::Graphics& g) {
@@ -40,8 +41,8 @@ void PlinkoAudioProcessorEditor::resized() {
     auto knobRow = r.removeFromBottom(104);
     board_.setBounds(r.reduced(8));
 
-    Knob* ks[] = { &gravity_, &feedback_, &delayMix_, &reverbMix_, &reverbDecay_, &tone_, &width_, &level_ };
-    const int count = 8;
+    Knob* ks[] = { &gravity_, &feedback_, &delayMix_, &reverbMix_, &reverbDecay_, &tone_, &width_, &dryWet_, &level_ };
+    const int count = 9;
     int w = knobRow.getWidth() / count;
     for (int i = 0; i < count; ++i) {
         auto cell = knobRow.removeFromLeft(i == count - 1 ? knobRow.getWidth() : w);

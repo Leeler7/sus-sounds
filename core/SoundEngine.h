@@ -17,7 +17,7 @@ struct EngineParams {
     float delayMix   = 0.5f;   // wet delay level
     float reverbMix  = 0.5f;   // wet reverb level
     float reverbDecay= 0.92f;  // reverb comb feedback (long tail, fills gaps between hits)
-    float dryMix     = 0.9f;   // dry grain level
+    float dryWet     = 0.5f;   // 0 = dry (tones/input), 1 = fully wet (delay+reverb)
     float panWidth   = 1.0f;   // 1 = full width, 0 = mono-center
     int   rootMidi   = 57;     // A3
     int   pitchRangeOct = 3;   // y spans this many octaves of the scale

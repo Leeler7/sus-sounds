@@ -164,7 +164,10 @@ void SoundEngine::process(float* outL, float* outR, int n, const ScheduledHit* h
 
         float rv = reverbProcess(revIn);
 
-        outL[i] = dryL * ep_.dryMix + dlo * ep_.delayMix + rv * ep_.reverbMix;
-        outR[i] = dryR * ep_.dryMix + dro * ep_.delayMix + rv * ep_.reverbMix;
+        float wetL = dlo * ep_.delayMix + rv * ep_.reverbMix;
+        float wetR = dro * ep_.delayMix + rv * ep_.reverbMix;
+        float dry = 1.0f - ep_.dryWet;
+        outL[i] = dryL * dry + wetL * ep_.dryWet;
+        outR[i] = dryR * dry + wetR * ep_.dryWet;
     }
 }

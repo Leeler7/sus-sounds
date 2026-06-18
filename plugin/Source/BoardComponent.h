@@ -32,9 +32,9 @@ private:
     float toBoardY(float py) const { auto a = boardArea(); return (1.0f - (py - a.getY()) / a.getHeight()) * board_.topY; }
 
     int  pegAt(float bx, float by) const;     // index of peg near (bx,by), or -1
-    bool addPeg(float bx, float by);          // returns false if full / out of bounds
-    void removePeg(int i);
-    void commit();                            // push board_ to the processor
+    bool addPeg(float bx, float by);          // returns false if full / out of bounds (local only)
+    void removePeg(int i);                    // local only
+    void eraseAt(int i);                      // delete peg i locally + enqueue the edit
 
     PlinkoAudioProcessor& proc_;
     BoardParams board_;     // editable working copy (authoritative for drawing/editing)

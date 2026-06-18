@@ -10,6 +10,7 @@ namespace pid {
     static constexpr const char* reverbDecay = "reverbDecay";
     static constexpr const char* tone        = "tone";
     static constexpr const char* panWidth    = "panWidth";
+    static constexpr const char* dryWet      = "dryWet";
     static constexpr const char* level       = "level";
 }
 
@@ -26,6 +27,7 @@ inline juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout
     add(pid::reverbDecay, "Reverb Size",  NormalisableRange<float>(0.5f, 0.95f),       0.85f);
     add(pid::tone,        "Tone",         NormalisableRange<float>(0.0f, 1.0f),        0.6f);
     add(pid::panWidth,    "Width",        NormalisableRange<float>(0.0f, 1.0f),        1.0f);
+    add(pid::dryWet,      "Dry/Wet",      NormalisableRange<float>(0.0f, 1.0f),        0.5f);
     add(pid::level,       "Level",        NormalisableRange<float>(0.0f, 1.5f),        1.0f);
     return { p.begin(), p.end() };
 }

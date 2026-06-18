@@ -72,38 +72,67 @@ void BoardComponent::removePeg(int i) {
     board_.pegCount = last;
 }
 
-void BoardComponent::commit() { proc_.commitBoard(board_); repaint(); }
+void BoardComponent::eraseAt(int i) {
+    PlinkoAudioProcessor::Edit ed;
+    ed.type = PlinkoAudioProcessor::EditType::Delete;
+    ed.idx = i;
+    proc_.pushEdit(ed);
+    removePeg(i);   // mirror locally (same swap-remove the physics will do)
+    repaint();
+}
 
 void BoardComponent::mouseDown(const juce::MouseEvent& e) {
     float bx = toBoardX(e.position.x), by = toBoardY(e.position.y);
     int hit = pegAt(bx, by);
 
-    if (e.mods.isRightButtonDown()) {           // delete
-        if (hit >= 0) { removePeg(hit); commit(); }
+    if (e.mods.isRightButtonDown()) {            // right = erase (also sweepable via drag)
+        if (hit >= 0) eraseAt(hit);
         return;
     }
     if (hit >= 0) {                              // grab to move
         dragIdx_ = hit;
-    } else if (addPeg(bx, by)) {                 // add, then drag to position
-        dragIdx_ = board_.pegCount - 1;
+    } else if (addPeg(bx, by)) {                 // add a delay peg, then drag to position
+        int idx = board_.pegCount - 1;
+        PlinkoAudioProcessor::Edit ed;
+        ed.type = PlinkoAudioProcessor::EditType::Add;
+        ed.x = board_.pegX[idx]; ed.y = board_.pegY[idx];
+        ed.rest = board_.pegRest[idx]; ed.pegType = board_.pegType[idx];
+        proc_.pushEdit(ed);
+        dragIdx_ = idx;
         repaint();
     }
 }
 
 void BoardComponent::mouseDrag(const juce::MouseEvent& e) {
+    if (e.mods.isRightButtonDown()) {            // sweep-erase: delete pegs as the cursor passes
+        int hit = pegAt(toBoardX(e.position.x), toBoardY(e.position.y));
+        if (hit >= 0) eraseAt(hit);
+        return;
+    }
     if (dragIdx_ < 0) return;
     float bx = juce::jlimit(0.05f, board_.width - 0.05f, toBoardX(e.position.x));
     float by = juce::jlimit(board_.exitY + 0.05f, board_.topY - 0.02f, toBoardY(e.position.y));
     board_.pegX[dragIdx_] = bx;
     board_.pegY[dragIdx_] = by;
-    repaint();   // visual follows live; commit (physics re-init) on mouse-up
+    repaint();   // physics catches up on mouse-up (one Move edit, no ball reset)
 }
 
 void BoardComponent::mouseUp(const juce::MouseEvent&) {
-    if (dragIdx_ >= 0) { dragIdx_ = -1; commit(); }
+    if (dragIdx_ < 0) return;
+    PlinkoAudioProcessor::Edit ed;
+    ed.type = PlinkoAudioProcessor::EditType::Move;
+    ed.idx = dragIdx_; ed.x = board_.pegX[dragIdx_]; ed.y = board_.pegY[dragIdx_];
+    proc_.pushEdit(ed);
+    dragIdx_ = -1;
 }
 
 void BoardComponent::mouseDoubleClick(const juce::MouseEvent& e) {
     int hit = pegAt(toBoardX(e.position.x), toBoardY(e.position.y));
-    if (hit >= 0) { board_.pegType[hit] = 1 - board_.pegType[hit]; commit(); }
+    if (hit < 0) return;
+    board_.pegType[hit] = 1 - board_.pegType[hit];
+    PlinkoAudioProcessor::Edit ed;
+    ed.type = PlinkoAudioProcessor::EditType::SetType;
+    ed.idx = hit; ed.pegType = board_.pegType[hit];
+    proc_.pushEdit(ed);
+    repaint();
 }

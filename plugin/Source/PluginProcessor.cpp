@@ -5,13 +5,14 @@ PlinkoAudioProcessor::PlinkoAudioProcessor()
     : AudioProcessor(BusesProperties()
         .withInput("Input", juce::AudioChannelSet::stereo(), true)
         .withOutput("Output", juce::AudioChannelSet::stereo(), true)) {
-    makeStaggeredBoard(board_);
-    for (int i = 0; i < board_.pegCount; ++i) {
-        if (i % 3 == 1) board_.pegType[i] = 1;     // ~1/3 reverb pegs
-        if (i % 9 == 0) board_.pegRest[i] = 1.4f;   // bumpers
-    }
+    // Clean starting board: ~half as many pegs, small, all plain delay pegs.
+    // (The user builds it up via the GUI; reverb/bumper pegs are made by editing.)
+    makeStaggeredBoard(board_, 7, 5);
+    board_.pegRadius = 0.0075f;
     ev_.reserve(512);
     hits_.reserve(512);
+    pendingEdits_.reserve(256);
+    applyBuf_.reserve(256);
 }
 
 void PlinkoAudioProcessor::prepareToPlay(double sampleRate, int) {
@@ -20,10 +21,10 @@ void PlinkoAudioProcessor::prepareToPlay(double sampleRate, int) {
     engine_.prepare(sampleRate, ep_);
 }
 
-void PlinkoAudioProcessor::commitBoard(const BoardParams& nb) {
-    const juce::ScopedLock sl(boardLock_);
-    pendingBoard_ = nb;
-    boardDirty_.store(true, std::memory_order_release);
+void PlinkoAudioProcessor::pushEdit(const Edit& e) {
+    const juce::ScopedLock sl(editLock_);
+    pendingEdits_.push_back(e);
+    hasEdits_.store(true, std::memory_order_release);
 }
 
 bool PlinkoAudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const {
@@ -38,15 +39,23 @@ void PlinkoAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
     juce::ScopedNoDenormals noDenormals;
     const int n = buffer.getNumSamples();
 
-    // Apply a pending board edit (re-init physics). Try-lock so we never block the GUI;
-    // if we can't grab it this block, we'll catch it next block. (Re-init allocates -- a
-    // brief, acceptable cost on an explicit edit; the lock-free body-pool path is backlogged.)
-    if (boardDirty_.load(std::memory_order_acquire)) {
-        const juce::ScopedTryLock stl(boardLock_);
+    // Apply queued live peg edits to the running world (no re-init -> ball keeps flowing).
+    // Try-lock so we never block the GUI; if we miss it, edits apply next block.
+    if (hasEdits_.load(std::memory_order_acquire)) {
+        const juce::ScopedTryLock stl(editLock_);
         if (stl.isLocked()) {
-            board_ = pendingBoard_;
-            physics_.init(kSeed, board_);
-            boardDirty_.store(false, std::memory_order_release);
+            applyBuf_.swap(pendingEdits_);
+            hasEdits_.store(false, std::memory_order_release);
+            for (const auto& e : applyBuf_) {
+                switch (e.type) {
+                    case EditType::Add:     physics_.addPeg(e.x, e.y, e.rest, e.pegType); break;
+                    case EditType::Move:    physics_.movePeg(e.idx, e.x, e.y); break;
+                    case EditType::Delete:  physics_.removePeg(e.idx); break;
+                    case EditType::SetType: physics_.setPegType(e.idx, e.pegType); break;
+                }
+            }
+            applyBuf_.clear();
+            board_ = physics_.boardParams();   // keep mirror current (for re-prepare)
         }
     }
 
@@ -57,6 +66,7 @@ void PlinkoAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
     ep_.reverbDecay = apvts.getRawParameterValue(pid::reverbDecay)->load();
     ep_.tone        = apvts.getRawParameterValue(pid::tone)->load();
     ep_.panWidth    = apvts.getRawParameterValue(pid::panWidth)->load();
+    ep_.dryWet      = apvts.getRawParameterValue(pid::dryWet)->load();
     const float gravity = apvts.getRawParameterValue(pid::gravity)->load();
     const float level   = apvts.getRawParameterValue(pid::level)->load();
 

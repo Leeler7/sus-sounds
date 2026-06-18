@@ -40,9 +40,11 @@ public:
     const BoardParams& board() const { return board_; }
     std::atomic<float> ballNX{ 0.5f }, ballNY{ 1.0f };  // normalized ball position (lock-free)
 
-    // GUI thread: commit an edited board. The audio thread swaps it in and re-inits
-    // the physics on the next block (try-lock, so the audio thread never blocks).
-    void commitBoard(const BoardParams& nb);
+    // GUI thread: enqueue a single live peg edit. The audio thread applies it to the
+    // running physics next block (no re-init -> the ball keeps flowing).
+    enum class EditType { Add, Move, Delete, SetType };
+    struct Edit { EditType type; int idx = 0; float x = 0, y = 0, rest = 0.5f; int pegType = 0; };
+    void pushEdit(const Edit& e);
 
 private:
     BoardParams board_;
@@ -53,9 +55,9 @@ private:
     std::vector<Collision> ev_;
     std::vector<ScheduledHit> hits_;
 
-    juce::CriticalSection boardLock_;
-    BoardParams pendingBoard_;
-    std::atomic<bool> boardDirty_{ false };
+    juce::CriticalSection editLock_;
+    std::vector<Edit> pendingEdits_, applyBuf_;
+    std::atomic<bool> hasEdits_{ false };
     static constexpr uint64_t kSeed = 12345;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PlinkoAudioProcessor)

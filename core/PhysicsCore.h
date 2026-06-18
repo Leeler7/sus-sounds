@@ -84,8 +84,14 @@ public:
     int       dbgPegCount() const { return p_.pegCount; }
     long long dbgRawBegins() const { return rawBegins_; }
 
-    // live control (GUI)
+    // live control (GUI) -- these modify the running world WITHOUT re-init (ball preserved)
     void setGravity(float g);
+    bool addPeg(float x, float y, float rest, int type);  // false if full
+    void movePeg(int i, float x, float y);
+    void removePeg(int i);
+    void setPegType(int i, int type);
+    int  pegCount() const { return p_.pegCount; }
+    const BoardParams& boardParams() const { return p_; }
 
 private:
     static constexpr double SIM_DT = 1.0 / 1000.0; // fixed 1 kHz sim step
@@ -93,6 +99,7 @@ private:
 
     void stepOnce(std::vector<Collision>& out);
     void respawn();
+    void createPegBody(int i);   // build the Box2D body+shape for peg i (type encoded in userData)
 
     BoardParams p_{};
     uint64_t baseSeed_ = 0;
@@ -104,7 +111,8 @@ private:
     double loopStart_ = 0.0;
     long long rawBegins_ = 0;   // debug: total raw begin-touch events seen
     int slowCount_ = 0;         // consecutive sim steps the ball has been "slow"
-    int pegInfo_[128] = {0};    // per-peg type, addressed via shape userData (non-null = peg)
+    b2BodyId  pegBody_[128]{};  // per-peg Box2D body (for live move/delete)
+    b2ShapeId pegShape_[128]{}; // per-peg shape (for live type change via userData)
 
     b2WorldId world_{};
     b2BodyId  ball_{};

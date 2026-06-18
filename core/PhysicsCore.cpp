@@ -56,20 +56,7 @@ void PhysicsWorld::init(uint64_t seed, const BoardParams& params) {
     for (int i = 0; i < p_.pegCount; ++i)
         createPegBody(i);
 
-    // Ball: dynamic circle. Contact events left off here; OR-semantics still fire ball-peg.
-    {
-        b2BodyDef bd = b2DefaultBodyDef();
-        bd.type = b2_dynamicBody;
-        bd.position = b2Vec2{ p_.dropX, p_.dropY };
-        ball_ = b2CreateBody(world_, &bd);
-        b2Circle c = { b2Vec2{ 0.0f, 0.0f }, p_.ballRadius };
-        b2ShapeDef sd = b2DefaultShapeDef();
-        sd.material.restitution = p_.restitution;
-        sd.density = 1.0f;
-        sd.enableContactEvents = true;   // needed for the ball-peg contact to report
-        b2CreateCircleShape(ball_, &sd, &c);
-    }
-    b2Body_SetLinearVelocity(ball_, b2Vec2{ p_.initialVx, 0.0f }); // break symmetry at drop
+    createBall();
 
     inited_ = true;
 }
@@ -98,6 +85,20 @@ void PhysicsWorld::createPegBody(int i) {
     sd.enableContactEvents = true;
     sd.userData = (void*)(intptr_t)(p_.pegType[i] + 1);              // non-null = peg; encodes type
     pegShape_[i] = b2CreateCircleShape(pegBody_[i], &sd, &c);
+}
+
+void PhysicsWorld::createBall() {
+    b2BodyDef bd = b2DefaultBodyDef();
+    bd.type = b2_dynamicBody;
+    bd.position = b2Vec2{ p_.dropX, p_.dropY };
+    ball_ = b2CreateBody(world_, &bd);
+    b2Circle c = { b2Vec2{ 0.0f, 0.0f }, p_.ballRadius };
+    b2ShapeDef sd = b2DefaultShapeDef();
+    sd.material.restitution = p_.restitution;
+    sd.density = 1.0f;
+    sd.enableContactEvents = true;                  // needed for the ball-peg contact to report
+    b2CreateCircleShape(ball_, &sd, &c);
+    b2Body_SetLinearVelocity(ball_, b2Vec2{ p_.initialVx, 0.0f });  // break symmetry at drop
 }
 
 bool PhysicsWorld::addPeg(float x, float y, float rest, int type) {
@@ -144,12 +145,12 @@ void PhysicsWorld::holdAtDrop() {
 
 void PhysicsWorld::respawn() {
     ++loop_;
-    // reseed IDENTICALLY each loop so the groove repeats consistently (loop 0 == loop N),
-    // matching init's seed -- the first drop now behaves like every subsequent one.
+    // reseed IDENTICALLY each loop so the groove repeats (loop 0 == loop N), and RECREATE the
+    // ball fresh (instead of teleporting) so it carries no residual contact/impulse from the
+    // exit -- this is what made later drops drift right vs the first.
     rng_.seed(baseSeed_, 1);
-    b2Body_SetTransform(ball_, b2Vec2{ p_.dropX, p_.dropY }, b2MakeRot(0.0f));
-    b2Body_SetLinearVelocity(ball_, b2Vec2{ p_.initialVx, 0.0f }); // break symmetry at respawn
-    b2Body_SetAngularVelocity(ball_, 0.0f);
+    b2DestroyBody(ball_);
+    createBall();
     slowCount_ = 0;
     loopStart_ = simTime_;
 }

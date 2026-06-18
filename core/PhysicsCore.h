@@ -102,6 +102,7 @@ private:
     void stepOnce(std::vector<Collision>& out);
     void respawn();
     void createPegBody(int i);   // build the Box2D body+shape for peg i (type encoded in userData)
+    void createBall();           // (re)create the ball fresh at the drop point + initial velocity
 
     BoardParams p_{};
     uint64_t baseSeed_ = 0;

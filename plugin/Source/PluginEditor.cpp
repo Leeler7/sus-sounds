@@ -1,4 +1,6 @@
 #include "PluginEditor.h"
+#include "Wav.h"
+#include <cmath>
 
 static const juce::Colour kDelay  (0xffe0a458);
 static const juce::Colour kReverb (0xff5bc0be);
@@ -62,8 +64,43 @@ PlinkoAudioProcessorEditor::PlinkoAudioProcessorEditor(PlinkoAudioProcessor& p)
     addAndMakeVisible(sourceBox_);
     sourceBox_.addItem("Synth", 1);
     sourceBox_.addItem("Input", 2);
+    sourceBox_.addItem("WAV Loop", 3);
     sourceAtt_ = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(
         proc_.apvts, pid::source, sourceBox_);
+
+    addAndMakeVisible(loadWavBtn_);
+    loadWavBtn_.setButtonText("Load WAV");
+    loadWavBtn_.onClick = [this] {
+        chooser_ = std::make_unique<juce::FileChooser>("Load a WAV loop to test the input path",
+                                                       juce::File{}, "*.wav");
+        auto self = juce::Component::SafePointer<PlinkoAudioProcessorEditor>(this);
+        chooser_->launchAsync(juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles,
+            [self](const juce::FileChooser& fc) {
+                if (self == nullptr) return;
+                auto file = fc.getResult();
+                if (file == juce::File{}) return;
+                double srcRate = 44100.0;
+                auto mono = readWavMono(file.getFullPathName().toStdString(), srcRate);
+                if (mono.empty()) return;
+                const double hostRate = self->proc_.getSampleRate();
+                std::vector<float> out;
+                if (hostRate <= 0.0 || std::fabs(srcRate - hostRate) < 1.0) {
+                    out = std::move(mono);                       // same rate -> use as-is
+                } else {                                         // linear resample to the host rate
+                    const double ratio = srcRate / hostRate;
+                    const int outN = juce::jmax(1, (int)((double)mono.size() / ratio));
+                    out.resize((size_t)outN);
+                    for (int i = 0; i < outN; ++i) {
+                        double sp = i * ratio; int i0 = (int)sp; double fr = sp - i0;
+                        float a = mono[(size_t)i0];
+                        float b = (i0 + 1 < (int)mono.size()) ? mono[(size_t)i0 + 1] : a;
+                        out[(size_t)i] = (float)(a + (b - a) * fr);
+                    }
+                }
+                self->proc_.loadWavLoop(std::move(out));
+                self->sourceBox_.setSelectedId(3, juce::sendNotificationSync);  // switch to WAV Loop
+            });
+    };
 
     // Shape
     addKnob(gravity_,    pid::gravity,    "Gravity");
@@ -137,6 +174,7 @@ void PlinkoAudioProcessorEditor::resized() {
     clearBtn_.setBounds(top.removeFromLeft(70).reduced(2));
     revertBtn_.setBounds(top.removeFromLeft(70).reduced(2));
     sourceBox_.setBounds(top.removeFromLeft(110).reduced(2));
+    loadWavBtn_.setBounds(top.removeFromLeft(90).reduced(2));
 
     auto shape = r.removeFromTop(82);   // Shape section
     layRow(shape, { &gravity_, &boardWidth_, &ballSize_, &ballBounce_ });

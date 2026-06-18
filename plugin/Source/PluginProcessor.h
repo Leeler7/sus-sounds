@@ -53,6 +53,10 @@ public:
     };
     void pushEdit(const Edit& e);
 
+    // GUI thread: hand a mono loop (already resampled to the host rate) to the audio thread for
+    // the "WAV Loop" test source. Swapped in lock-free on the next block.
+    void loadWavLoop(std::vector<float>&& mono);
+
     std::atomic<bool> running_{ false };  // open STOPPED (ball parked at the draggable start point)
 
 private:
@@ -66,6 +70,10 @@ private:
 
     std::vector<float> inRing_;   int inWrite_ = 0, inRingLen_ = 1;  // mono history of recent input (grain source)
     std::vector<float> dryCopyL_, dryCopyR_;                          // dry block stashed for input-mode passthrough
+    std::vector<float> wav_;      int wavPos_ = 0;                    // WAV-loop test source (audio thread)
+    std::vector<float> wavPending_;                                  // GUI hands a new loop over here
+    std::atomic<bool>  wavReady_{ false };
+    juce::CriticalSection wavLock_;
 
     juce::CriticalSection editLock_;
     std::vector<Edit> pendingEdits_, applyBuf_;

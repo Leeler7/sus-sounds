@@ -37,6 +37,12 @@ void PlinkoAudioProcessor::pushEdit(const Edit& e) {
     hasEdits_.store(true, std::memory_order_release);
 }
 
+void PlinkoAudioProcessor::loadWavLoop(std::vector<float>&& mono) {
+    const juce::ScopedLock sl(wavLock_);
+    wavPending_ = std::move(mono);
+    wavReady_.store(true, std::memory_order_release);
+}
+
 bool PlinkoAudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const {
     auto out = layouts.getMainOutputChannelSet();
     if (out != juce::AudioChannelSet::mono() && out != juce::AudioChannelSet::stereo())
@@ -51,17 +57,31 @@ void PlinkoAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
 
     // Capture the incoming audio: a mono copy into the input ring (grain source) and, in input
     // mode, the dry stereo block for passthrough. w0 = ring write index at the start of the block.
-    const bool useInput = apvts.getRawParameterValue(pid::source)->load() > 0.5f;
+    if (wavReady_.load(std::memory_order_acquire)) {   // pick up a freshly loaded WAV loop
+        const juce::ScopedTryLock stl(wavLock_);
+        if (stl.isLocked()) { wav_.swap(wavPending_); wavReady_.store(false, std::memory_order_release); wavPos_ = 0; }
+    }
+    const int  source    = (int)apvts.getRawParameterValue(pid::source)->load();  // 0 Synth, 1 Input, 2 WAV
+    const bool inputMode = (source >= 1);
+    const bool wavMode   = (source == 2);
     const int  w0 = inWrite_;
-    const bool capDry = useInput && n <= (int)dryCopyL_.size();
+    const bool capDry = inputMode && n <= (int)dryCopyL_.size();
     {
         const int nch = buffer.getNumChannels();
         const float* inL = buffer.getReadPointer(0);
         const float* inR = nch > 1 ? buffer.getReadPointer(1) : inL;
         for (int i = 0; i < n; ++i) {
-            inRing_[inWrite_] = 0.5f * (inL[i] + inR[i]);
+            float m, dl, dr;
+            if (wavMode) {                 // looping WAV is both the dry signal and the grain source
+                float s = 0.0f;
+                if (!wav_.empty()) { s = wav_[wavPos_]; if (++wavPos_ >= (int)wav_.size()) wavPos_ = 0; }
+                m = dl = dr = s;
+            } else {                       // live input (dry unused in Synth mode)
+                dl = inL[i]; dr = inR[i]; m = 0.5f * (dl + dr);
+            }
+            inRing_[inWrite_] = m;
             if (++inWrite_ >= inRingLen_) inWrite_ = 0;
-            if (capDry) { dryCopyL_[i] = inL[i]; dryCopyR_[i] = inR[i]; }
+            if (capDry) { dryCopyL_[i] = dl; dryCopyR_[i] = dr; }
         }
     }
 
@@ -109,8 +129,8 @@ void PlinkoAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
     // Input mode: feed the ring to the engine and let it output full wet (grain-fed delay/reverb);
     // the dry live signal is crossfaded back in below. Synth mode: no input, engine handles dry/wet.
     const float userDryWet = ep_.dryWet;
-    if (useInput) { ep_.dryWet = 1.0f; engine_.setInput(inRing_.data(), inRingLen_); }
-    else            engine_.setInput(nullptr, 0);
+    if (inputMode) { ep_.dryWet = 1.0f; engine_.setInput(inRing_.data(), inRingLen_); }
+    else             engine_.setInput(nullptr, 0);
     engine_.setParams(ep_);
 
     hits_.clear();
@@ -126,7 +146,7 @@ void PlinkoAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
             ScheduledHit sh;
             sh.offset = off;
             sh.hit = pegToTap(c, ep_);
-            if (useInput) {           // grab the last ~grainSeconds of live input at this hit
+            if (inputMode) {          // grab the last ~grainSeconds of the input at this hit
                 int gl = (int)(ep_.grainSeconds * sr_);
                 sh.hit.inputStart = ((w0 + off - gl) % inRingLen_ + inRingLen_) % inRingLen_;
             } else {

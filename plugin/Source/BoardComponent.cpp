@@ -8,7 +8,7 @@ BoardComponent::BoardComponent(PlinkoAudioProcessor& p) : proc_(p) {
 BoardComponent::~BoardComponent() { stopTimer(); }
 
 void BoardComponent::paint(juce::Graphics& g) {
-    auto area = boardArea();
+    auto area = boardRect();
     g.fillAll(juce::Colour(0xff15151c));
     g.setColour(juce::Colour(0xff202028));
     g.fillRoundedRectangle(area, 6.0f);
@@ -17,7 +17,7 @@ void BoardComponent::paint(juce::Graphics& g) {
     g.drawLine(sx(0.0f), sy(0.0f), sx(0.0f), sy(board_.topY), 2.0f);
     g.drawLine(sx(board_.width), sy(0.0f), sx(board_.width), sy(board_.topY), 2.0f);
 
-    float pr = (board_.pegRadius / board_.width) * area.getWidth();
+    float pr = board_.pegRadius * scale();
     for (int i = 0; i < board_.pegCount; ++i) {
         float cx = sx(board_.pegX[i]), cy = sy(board_.pegY[i]);
         juce::Colour c = (board_.pegType[i] == 1) ? juce::Colour(0xff5bc0be)   // reverb = teal
@@ -28,7 +28,7 @@ void BoardComponent::paint(juce::Graphics& g) {
 
     float bx = sx(proc_.ballNX.load(std::memory_order_relaxed) * board_.width);
     float by = sy(proc_.ballNY.load(std::memory_order_relaxed) * board_.topY);
-    float br = (board_.ballRadius / board_.width) * area.getWidth();
+    float br = board_.ballRadius * scale();
     g.setColour(juce::Colours::white);
     g.fillEllipse(bx - br, by - br, br * 2.0f, br * 2.0f);
 
@@ -41,7 +41,7 @@ void BoardComponent::paint(juce::Graphics& g) {
     g.setFont(12.0f);
     const char* hint = proc_.running_.load()
         ? "click: add   drag: move   right-click/drag: delete   double-click: delay/reverb"
-        : "stopped — drag the ball to set the start point";
+        : "stopped - drag the ball to set the start point";
     g.drawText(hint, area.reduced(6.0f).removeFromTop(16.0f), juce::Justification::centredLeft);
 }
 

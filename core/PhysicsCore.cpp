@@ -144,8 +144,9 @@ void PhysicsWorld::holdAtDrop() {
 
 void PhysicsWorld::respawn() {
     ++loop_;
-    // reseed deterministically from (baseSeed, loopIndex) so each loop is reproducible
-    rng_.seed(baseSeed_, (uint64_t)loop_ + 1u);
+    // reseed IDENTICALLY each loop so the groove repeats consistently (loop 0 == loop N),
+    // matching init's seed -- the first drop now behaves like every subsequent one.
+    rng_.seed(baseSeed_, 1);
     b2Body_SetTransform(ball_, b2Vec2{ p_.dropX, p_.dropY }, b2MakeRot(0.0f));
     b2Body_SetLinearVelocity(ball_, b2Vec2{ p_.initialVx, 0.0f }); // break symmetry at respawn
     b2Body_SetAngularVelocity(ball_, 0.0f);

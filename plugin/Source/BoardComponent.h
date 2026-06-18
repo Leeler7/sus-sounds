@@ -25,11 +25,19 @@ public:
 private:
     void timerCallback() override { repaint(); }
 
-    juce::Rectangle<float> boardArea() const { return getLocalBounds().toFloat().reduced(8.0f); }
-    float sx(float x) const { auto a = boardArea(); return a.getX() + (x / board_.width) * a.getWidth(); }
-    float sy(float y) const { auto a = boardArea(); return a.getY() + (1.0f - y / board_.topY) * a.getHeight(); }
-    float toBoardX(float px) const { auto a = boardArea(); return (px - a.getX()) / a.getWidth() * board_.width; }
-    float toBoardY(float py) const { auto a = boardArea(); return (1.0f - (py - a.getY()) / a.getHeight()) * board_.topY; }
+    // Aspect-correct board rect: one uniform scale for X and Y so circles stay circles and
+    // the drawing matches the physics exactly (no distortion).
+    juce::Rectangle<float> boardRect() const {
+        auto a = getLocalBounds().toFloat().reduced(8.0f);
+        float s = juce::jmin(a.getWidth() / board_.width, a.getHeight() / board_.topY);
+        float w = board_.width * s, h = board_.topY * s;
+        return { a.getCentreX() - w * 0.5f, a.getCentreY() - h * 0.5f, w, h };
+    }
+    float scale() const { return boardRect().getWidth() / board_.width; }
+    float sx(float x) const { return boardRect().getX() + x * scale(); }
+    float sy(float y) const { return boardRect().getBottom() - y * scale(); }   // y=0 at bottom
+    float toBoardX(float px) const { return (px - boardRect().getX()) / scale(); }
+    float toBoardY(float py) const { return (boardRect().getBottom() - py) / scale(); }
 
     int  pegAt(float bx, float by) const;     // index of peg near (bx,by), or -1
     bool addPeg(float bx, float by);          // returns false if full / out of bounds (local only)

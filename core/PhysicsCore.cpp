@@ -39,6 +39,14 @@ void PhysicsWorld::init(uint64_t seed, const BoardParams& params) {
 
     b2WorldDef wd = b2DefaultWorldDef();
     wd.gravity = b2Vec2{ 0.0f, -p_.gravity };
+    // Box2D ignores restitution below this CLOSING speed (anti-jitter). Default is 1.0, but our
+    // whole board is ~1 unit wide, so at low gravity slow contacts never bounced. Drop it low so
+    // bounce behaves consistently at any gravity.
+    wd.restitutionThreshold = 0.05f;
+    // Bounce > 1 ADDS energy (powered bumpers) and compounds hit-over-hit. Cap the ball's speed so
+    // that's a lively accent, not a runaway. Default is 400 (≈no cap); normal high-gravity play
+    // tops out around ~12, so 16 leaves bumper headroom while bounding the explosion.
+    wd.maximumLinearSpeed = 16.0f;
     world_ = b2CreateWorld(&wd);
 
     // Side walls: static segments, NO contact events (wall bounces are not taps).

@@ -59,6 +59,12 @@ void SoundEngine::prepare(double sampleRate, const EngineParams& ep) {
     }
 }
 
+void SoundEngine::setInput(const float* mono, int len) {
+    input_ = mono;
+    inLen_ = len;
+    useInput_ = (mono != nullptr && len > 0);
+}
+
 void SoundEngine::startVoice(const Hit& h) {
     int idx = -1;
     float minEnv = 1e9f;
@@ -79,6 +85,10 @@ void SoundEngine::startVoice(const Hit& h) {
     v.envMul = std::exp(-1.0f / (ep_.grainSeconds * (float)sr_));
     v.atkN = (int)(0.002 * sr_);   // 2 ms attack (fast, but click-free)
     v.atkPos = 0;
+    v.fromInput = useInput_;        // effect path: play a grain of the input
+    v.inPos = h.inputStart;
+    v.lp = 0.0f;
+    v.lpCoef = 0.06f + 0.94f * h.brightness;  // brighter hit = less lowpass (darkness control)
 }
 
 float SoundEngine::reverbProcess(float in) {
@@ -109,13 +119,22 @@ void SoundEngine::process(float* outL, float* outR, int n, const ScheduledHit* h
         for (int k = 0; k < NV; ++k) {
             Voice& v = v_[k];
             if (!v.active) continue;
-            float p = (float)v.ph;
-            float s = std::sin(p)
-                    + 0.50f * v.bright * std::sin(2.0f * p)
-                    + 0.28f * v.bright * std::sin(3.0f * p)
-                    + 0.14f * v.bright * std::sin(4.0f * p);
-            v.ph += v.dph;
-            if (v.ph > TWO_PI) v.ph -= TWO_PI;
+
+            float s;
+            if (v.fromInput) {                 // grain of the input audio
+                float x = (v.inPos >= 0 && v.inPos < inLen_) ? input_[v.inPos] : 0.0f;
+                ++v.inPos;
+                v.lp += v.lpCoef * (x - v.lp); // one-pole lowpass (brightness)
+                s = v.lp;
+            } else {                           // synthesized exciter tone
+                float p = (float)v.ph;
+                s = std::sin(p)
+                  + 0.50f * v.bright * std::sin(2.0f * p)
+                  + 0.28f * v.bright * std::sin(3.0f * p)
+                  + 0.14f * v.bright * std::sin(4.0f * p);
+                v.ph += v.dph;
+                if (v.ph > TWO_PI) v.ph -= TWO_PI;
+            }
 
             float a = v.env;
             if (v.atkPos < v.atkN) { a *= (float)v.atkPos / (float)v.atkN; ++v.atkPos; }
@@ -124,11 +143,14 @@ void SoundEngine::process(float* outL, float* outR, int n, const ScheduledHit* h
 
             float val = s * a * v.amp;
             float l = val * v.panL, r = val * v.panR;
-            if (v.type == 0) {                 // delay peg: dry + into the delay line
-                dryL += l; dryR += r;
+            // input grains route ONLY to the wet busses (the continuous dry input is mixed
+            // by the host/harness); exciter tones include their own dry.
+            bool addDry = !v.fromInput;
+            if (v.type == 0) {                 // delay peg: (dry) + into the delay line
+                if (addDry) { dryL += l; dryR += r; }
                 delInL += l; delInR += r;
-            } else {                           // reverb peg: mostly into the reverb (splash)
-                dryL += l * 0.3f; dryR += r * 0.3f;
+            } else {                           // reverb peg: into the reverb (splash)
+                if (addDry) { dryL += l * 0.3f; dryR += r * 0.3f; }
                 revIn += (l + r) * 0.5f;
             }
         }

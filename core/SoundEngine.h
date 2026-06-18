@@ -29,7 +29,8 @@ struct Hit {
     float panL, panR;
     float level;
     float brightness;
-    int   type;       // 0 = delay, 1 = reverb
+    int   type;        // 0 = delay, 1 = reverb
+    int   inputStart;  // input mode: absolute input sample to start this grain from
 };
 
 struct ScheduledHit { int offset; Hit hit; };  // offset = sample within the block
@@ -40,6 +41,9 @@ Hit pegToTap(const Collision& c, const EngineParams& ep);
 class SoundEngine {
 public:
     void prepare(double sampleRate, const EngineParams& ep);
+    // Effect path: set the input audio (mono). Hits then play grains OF this input
+    // instead of synthesized exciter tones. Call after prepare().
+    void setInput(const float* mono, int len);
     // Render n samples. `hits` must be sorted by ascending offset.
     void process(float* outL, float* outR, int n, const ScheduledHit* hits, int nHits);
 
@@ -51,6 +55,9 @@ private:
         int    type = 0;
         float  env = 0.0f, envMul = 0.0f;
         int    atkN = 0, atkPos = 0;
+        bool   fromInput = false;   // read input audio instead of synthesizing
+        int    inPos = 0;           // absolute read index into input
+        float  lp = 0.0f, lpCoef = 1.0f;  // one-pole lowpass (brightness)
     };
     static constexpr int NV = 64;
 
@@ -60,6 +67,10 @@ private:
     double sr_ = 44100.0;
     EngineParams ep_{};
     Voice v_[NV];
+
+    const float* input_ = nullptr;  // effect-path source (mono)
+    int   inLen_ = 0;
+    bool  useInput_ = false;
 
     std::vector<float> dL_, dR_;  int dlen_ = 1, dpos_ = 0;          // stereo feedback delay
     std::vector<float> comb_[4];  int combLen_[4]{}, combPos_[4]{};  // reverb combs

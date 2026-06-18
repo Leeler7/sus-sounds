@@ -254,20 +254,31 @@ void PlinkoAudioProcessorEditor::resized() {
     auto master = r.removeFromBottom(92); // Master section
     layRow(master, { &tone_, &width_, &dryWet_, &level_ });
 
-    auto left  = r.removeFromLeft(150);   // Delay panel
-    auto right = r.removeFromRight(150);  // Reverb panel
+    auto left  = r.removeFromLeft(180);   // Delay panel
+    auto right = r.removeFromRight(180);  // Reverb panel
     board_.setBounds(r.reduced(4));
 
+    // The panels carry a lot of controls; lay them in a 2-column grid so each rotary keeps enough
+    // height to render (single-column collapsed the dials).
     auto layPanel = [](juce::Rectangle<int> p, juce::TextButton& btn, juce::ComboBox& typeBox,
                        std::initializer_list<std::pair<juce::Label*, juce::Component*>> rows) {
         p.reduce(4, 2);
         btn.setBounds(p.removeFromTop(22));
         p.removeFromTop(2);
         typeBox.setBounds(p.removeFromTop(22));
-        p.removeFromTop(2);
-        int n = (int)rows.size();
-        int h = n > 0 ? p.getHeight() / n : p.getHeight();
-        for (auto& r : rows) layStacked(p.removeFromTop(h), *r.first, *r.second);
+        p.removeFromTop(4);
+        const int n = (int)rows.size();
+        const int cols = 2;
+        const int nrows = (n + cols - 1) / cols;
+        const int cw = p.getWidth() / cols;
+        const int ch = nrows > 0 ? p.getHeight() / nrows : p.getHeight();
+        int i = 0;
+        for (auto& row : rows) {
+            int c = i % cols, rr = i / cols;
+            juce::Rectangle<int> cell(p.getX() + c * cw, p.getY() + rr * ch, cw, ch);
+            layStacked(cell.reduced(3), *row.first, *row.second);
+            ++i;
+        }
     };
     layPanel(left, delayBrushBtn_, delayTypeBox_, {
         { &delayBounceL_, &delayBounce_ }, { &delaySizeL_, &delaySize_ },

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(PlinkoDelayPlugin VERSION 0.1.0)
+project(PlinkoDelayPlugin VERSION 0.2.0)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -15,10 +15,10 @@ FetchContent_MakeAvailable(JUCE)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../core ${CMAKE_BINARY_DIR}/core_build)
 
 juce_add_plugin(PlinkoDelay
-    PRODUCT_NAME "Plinko Delay"
+    PRODUCT_NAME "Plinko Delay Dev"
     COMPANY_NAME "SusSounds"
     PLUGIN_MANUFACTURER_CODE Suss
-    PLUGIN_CODE Plnk
+    PLUGIN_CODE PlnD
     FORMATS VST3 Standalone
     IS_SYNTH FALSE
     NEEDS_MIDI_INPUT FALSE

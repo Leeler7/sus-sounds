@@ -164,7 +164,7 @@ ValueTreeState` (APVTS), separate from board geometry (§6).
 - [ ] **T4 (P1)** Tests/ — cross-platform golden CI matrix (Win/Mac/Linux bit-identical). Verify: CI green on all three.
 - [ ] **T5 (P1)** Tests/ — profiling harness at max caps; sets/validates the caps. Verify: worst-case per-block time under budget.
 - [ ] **T6 (P1)** Tests/ — audio-thread allocation detector wired into the test suite. Verify: any allocating processBlock fails.
-- [ ] **T7 (P2)** audio/ — PegToTap pure fn + multi-tap DelayEngine + reverb send + FTZ/DAZ. Verify: collision-at-N→tap-at-N, denormals flat-CPU.
+- [ ] **T7 (P2)** audio/ — sound engine per AGREED model (ARCHITECTURE §5.2): HYBRID source (input path + built-in exciter so it plays standalone); each hit = a discrete fast-attack event scheduled at the exact collision sample; per-peg TYPE routes it — delay peg → rhythmic echo (decay via Feedback), reverb peg → splash into reverb (long tail). Energy → event size; bumper (pegRest>1) → accent. PegToTap pure fn + multi-tap DelayEngine + reverb send + FTZ/DAZ. Verify: collision-at-N→tap-at-N, denormals flat-CPU, exciter plays on silence, delay-peg vs reverb-peg routing audibly distinct.
 - [ ] **T8 (P2)** state/ — ValueTree board state + APVTS macros + versioned presets. Verify: round-trip + old-version load.
 - [ ] **T9 (P2)** audio/ — decide pitch-shift method, report latency to host (PDC). Verify: pluginval latency check.
 - [ ] **T10 (P3)** gui/ — BoardView (drag pegs, read Snapshot) + MacroPanel + DebugOverlay.

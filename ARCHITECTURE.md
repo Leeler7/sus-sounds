@@ -208,6 +208,38 @@ distinct from a parametric bouncing-ball delay, the product has no moat — test
 as early as possible (a quick spike is cheap insurance even though we deferred a full
 prototype).
 
+### 5.2 Sound engine model (AGREED 2026-06-17 — build against this)
+
+**Source: HYBRID.** Two layers, mixable:
+- *Input path:* incoming audio is the thing delayed/reverbed (true effect). Does nothing on
+  silence.
+- *Built-in exciter:* a short enveloped tone the ball "pings" so the plugin plays standalone
+  (like the Python spike). Pitch from the peg (scale-quantized, §5). Use when input is silent,
+  or blend with input via an Exciter Mix macro.
+
+**A peg hit = a discrete transient EVENT, FAST ATTACK, scheduled at the exact collision
+sample.** Never a parameter ramp. Fast attack is the tactile magic — the sound is clearly
+caused by the bounce. Events are additive: many hits = denser texture, but each stays crisp,
+so the ball's path reads as a rhythm.
+
+**Per-peg TYPE routes the event** (a per-peg property, board state §6 — default delay; user
+can also blend):
+- *Delay peg:* spawns a discrete **echo** (of input and/or exciter). Level = impact energy,
+  pan = peg x, pitch = peg y (scale-quantized), filter = energy. Decay = the global Feedback
+  (a few fading repeats, ~0.5–3 s). This is the RHYTHMIC layer — short, locatable.
+- *Reverb peg:* injects a **splash** into the reverb send. Fast attack, LONG decay = the
+  reverb tail (~1–4 s). Size = impact energy. This is the ATMOSPHERIC layer — and it is
+  exactly the "effect swells then decays over time" behavior, localized to reverb pegs.
+
+**Energy and bumpers:** impact energy sets event size (louder echo / bigger splash). A bumper
+hit (pegRest > 1, §5) is an **accent** — louder + brighter.
+
+**Tempo:** event timing follows the chosen Sync Mode (tempo-locked / physics-free /
+self-clocking, §5).
+
+So: every hit is fast-attack; delay pegs decay fast (rhythm), reverb pegs decay long (bloom);
+it's discrete additive events, not knobs ramping.
+
 ## 6. Plugin state vs automatable parameters (review gap — resolved)
 
 A 128-peg board × 5 properties would be ~640 parameters; the VST3 parameter model and most

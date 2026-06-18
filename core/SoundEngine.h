@@ -21,6 +21,7 @@ struct EngineParams {
     float panWidth   = 1.0f;   // 1 = full width, 0 = mono-center
     int   rootMidi   = 57;     // A3
     int   pitchRangeOct = 3;   // y spans this many octaves of the scale
+    float tone = 0.6f;         // global brightness bias (0 = dark, 1 = bright)
     float grainSeconds = 0.18f;// grain LENGTH (fast attack, decays to ~silence by here).
                                // Short = distinct percussive echoes; long = a continuous smear.
 };
@@ -42,6 +43,8 @@ Hit pegToTap(const Collision& c, const EngineParams& ep);
 class SoundEngine {
 public:
     void prepare(double sampleRate, const EngineParams& ep);
+    // Update live params (does NOT resize buffers). Call per block from the host.
+    void setParams(const EngineParams& ep) { ep_ = ep; }
     // Effect path: set the input audio (mono). Hits then play grains OF this input
     // instead of synthesized exciter tones. Call after prepare().
     void setInput(const float* mono, int len);

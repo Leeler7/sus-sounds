@@ -1,0 +1,31 @@
+#pragma once
+#include <juce_audio_processors/juce_audio_processors.h>
+
+// Automatable macro parameters (board geometry stays as non-param state, ARCHITECTURE §6).
+namespace pid {
+    static constexpr const char* gravity     = "gravity";
+    static constexpr const char* feedback    = "feedback";
+    static constexpr const char* delayMix    = "delayMix";
+    static constexpr const char* reverbMix   = "reverbMix";
+    static constexpr const char* reverbDecay = "reverbDecay";
+    static constexpr const char* tone        = "tone";
+    static constexpr const char* panWidth    = "panWidth";
+    static constexpr const char* level       = "level";
+}
+
+inline juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout() {
+    using namespace juce;
+    std::vector<std::unique_ptr<RangedAudioParameter>> p;
+    auto add = [&](const char* id, const char* name, NormalisableRange<float> r, float def) {
+        p.push_back(std::make_unique<AudioParameterFloat>(ParameterID{ id, 1 }, name, r, def));
+    };
+    add(pid::gravity,     "Gravity",      NormalisableRange<float>(5.0f, 50.0f),      22.0f);
+    add(pid::feedback,    "Feedback",     NormalisableRange<float>(0.0f, 0.95f),       0.62f);
+    add(pid::delayMix,    "Delay Mix",    NormalisableRange<float>(0.0f, 1.0f),        0.5f);
+    add(pid::reverbMix,   "Reverb Mix",   NormalisableRange<float>(0.0f, 1.0f),        0.45f);
+    add(pid::reverbDecay, "Reverb Size",  NormalisableRange<float>(0.5f, 0.95f),       0.85f);
+    add(pid::tone,        "Tone",         NormalisableRange<float>(0.0f, 1.0f),        0.6f);
+    add(pid::panWidth,    "Width",        NormalisableRange<float>(0.0f, 1.0f),        1.0f);
+    add(pid::level,       "Level",        NormalisableRange<float>(0.0f, 1.5f),        1.0f);
+    return { p.begin(), p.end() };
+}

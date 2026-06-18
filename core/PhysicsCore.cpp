@@ -93,6 +93,8 @@ void PhysicsWorld::shutdown() {
 PhysicsWorld::~PhysicsWorld() { shutdown(); }
 
 float PhysicsWorld::dbgBallY() { return b2Body_GetPosition(ball_).y; }
+float PhysicsWorld::dbgBallX() { return b2Body_GetPosition(ball_).x; }
+void  PhysicsWorld::setGravity(float g) { if (inited_) b2World_SetGravity(world_, b2Vec2{ 0.0f, -g }); }
 
 void PhysicsWorld::respawn() {
     ++loop_;

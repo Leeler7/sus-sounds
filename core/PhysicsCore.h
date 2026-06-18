@@ -80,8 +80,12 @@ public:
 
     // debug probes (T1 bring-up)
     float     dbgBallY();
+    float     dbgBallX();
     int       dbgPegCount() const { return p_.pegCount; }
     long long dbgRawBegins() const { return rawBegins_; }
+
+    // live control (GUI)
+    void setGravity(float g);
 
 private:
     static constexpr double SIM_DT = 1.0 / 1000.0; // fixed 1 kHz sim step

@@ -168,7 +168,7 @@ ValueTreeState` (APVTS), separate from board geometry (§6).
   - Agreed model recap: HYBRID source (input + exciter); each hit = discrete fast-attack event; delay peg → rhythmic echo (Feedback decay), reverb peg → splash (long reverb tail); energy → size; bumper → accent.
 - [ ] **T8 (P2)** state/ — ValueTree board state + APVTS macros + versioned presets. Verify: round-trip + old-version load.
 - [ ] **T9 (P2)** audio/ — decide pitch-shift method, report latency to host (PDC). Verify: pluginval latency check.
-- [ ] **T10 (P3)** gui/ — BoardView (drag pegs, read Snapshot) + MacroPanel + DebugOverlay.
+- [~] **T10 / JUCE SHELL — first GUI DONE (2026-06-17).** `plugin/` JUCE 8.0.13 plugin (VST3 + Standalone), reuses `plinko_core`. PluginProcessor wires physics + sound engine into processBlock (APVTS macros: Gravity, Feedback, Delay, Reverb, Size, Tone, Width, Level — all live), gravity live via b2World_SetGravity. PluginEditor: animated BoardComponent (60fps; pegs amber=delay/teal=reverb/red=bumper, white ball) + 8 rotary knobs. Builds clean; determinism still green. RUNS in **exciter mode** (standalone instrument). REMAINING: live input-audio path (real-time input ring buffer), draggable peg editing, tempo-sync, delay/reverb type selectors (BACKLOG), board geometry as ValueTree state, denormal-on-board-edit. Build: `cmake -B build -S . -G "Visual Studio 17 2022" -A x64; cmake --build build --config Release`.
 
 ## GSTACK REVIEW REPORT
 

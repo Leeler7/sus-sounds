@@ -27,7 +27,8 @@ private:
 
     juce::TextButton playStop_, clearBtn_, revertBtn_, loadWavBtn_;
     juce::ComboBox sourceBox_;   // Synth (exciter) / live Input / WAV loop
-    std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> sourceAtt_;
+    juce::ComboBox inputModeBox_;// Granular / Live (input behavior)
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> sourceAtt_, inputModeAtt_;
     std::unique_ptr<juce::FileChooser> chooser_;
 
     Knob gravity_, boardWidth_, ballSize_, ballBounce_;    // Shape
@@ -41,7 +42,7 @@ private:
     juce::Slider reverbBounce_, reverbSize_; juce::Label reverbBounceL_, reverbSizeL_;
     juce::Slider reverbSend_, reverbLevel_, reverbTone_;  juce::Label reverbSendL_, reverbLevelL_, reverbToneL_;
     juce::Slider reverbDecay_, reverbMix_;   juce::Label reverbDecayL_, reverbMixL_; // per-bus (active bus)
-    Knob tone_, width_, dryWet_, level_;                    // Master
+    Knob tone_, width_, dryWet_, level_, hold_;             // Master (Hold = Live-mode capture length)
 
     juce::ComboBox busBox_;   // active effect bus (drives the brush + the per-bus sliders above)
     int activeBus_ = 0;

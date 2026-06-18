@@ -28,6 +28,8 @@ struct EngineParams {
     float tone = 0.6f;         // global brightness bias (0 = dark, 1 = bright)
     float grainSeconds = 0.18f;// grain LENGTH (fast attack, decays to ~silence by here).
                                // Short = distinct percussive echoes; long = a continuous smear.
+    float holdSeconds = 0.3f;  // Live input mode: how long a peg hit keeps feeding the live signal
+                               // into its bus's delay/reverb (gate release time). More = more sound.
 };
 
 struct Hit {
@@ -54,8 +56,11 @@ public:
     // Effect path: set the input audio (mono). Hits then play grains OF this input
     // instead of synthesized exciter tones. Call after prepare().
     void setInput(const float* mono, int len);
-    // Render n samples. `hits` must be sorted by ascending offset.
-    void process(float* outL, float* outR, int n, const ScheduledHit* hits, int nHits);
+    // Live input mode: peg hits gate the live signal into the buses (vs granular snapshot playback).
+    void setLiveMode(bool b) { liveMode_ = b; }
+    // Render n samples. `hits` must be sorted by ascending offset. `live` = the current block's
+    // mono input (used only in live mode); pass nullptr otherwise.
+    void process(float* outL, float* outR, int n, const ScheduledHit* hits, int nHits, const float* live = nullptr);
 
 private:
     struct Voice {
@@ -89,4 +94,8 @@ private:
     std::vector<float> comb_[kNumBuses][4];  int combLen_[4]{}, combMaxLen_[4]{}, combPos_[kNumBuses][4]{};  // combs (allocated at max size)
     std::vector<float> ap_[kNumBuses][2];    int apLen_[2]{},  apPos_[kNumBuses][2]{};       // per-bus allpasses
     float combLp_[kNumBuses][4]{};            // reverb comb HF-damping state (room/hall darkening)
+
+    bool  liveMode_ = false;                  // Live input: gate the live signal into buses (vs granular)
+    float gateD_[kNumBuses]{}, gateR_[kNumBuses]{};         // per-bus delay/reverb live-input gate envelopes
+    float gateDPanL_[kNumBuses]{}, gateDPanR_[kNumBuses]{}; // pan for the delay gate
 };

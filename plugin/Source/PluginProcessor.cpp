@@ -29,6 +29,7 @@ void PlinkoAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
     inWrite_ = 0;
     dryCopyL_.assign(juce::jmax(1, samplesPerBlock), 0.0f);
     dryCopyR_.assign(juce::jmax(1, samplesPerBlock), 0.0f);
+    liveBlock_.assign(juce::jmax(1, samplesPerBlock), 0.0f);
 }
 
 BoardParams PlinkoAudioProcessor::defaultBoard() {
@@ -72,6 +73,7 @@ void PlinkoAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
     const int  source    = (int)apvts.getRawParameterValue(pid::source)->load();  // 0 Synth, 1 Input, 2 WAV
     const bool inputMode = (source >= 1);
     const bool wavMode   = (source == 2);
+    const bool liveOn    = apvts.getRawParameterValue(pid::inputMode)->load() > 0.5f;  // Granular(0)/Live(1)
     const bool running   = running_.load(std::memory_order_relaxed);
     const int  w0 = inWrite_;
     const bool capDry = inputMode && n <= (int)dryCopyL_.size();
@@ -91,7 +93,7 @@ void PlinkoAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
             }
             inRing_[inWrite_] = m;
             if (++inWrite_ >= inRingLen_) inWrite_ = 0;
-            if (capDry) { dryCopyL_[i] = dl; dryCopyR_[i] = dr; }
+            if (capDry) { dryCopyL_[i] = dl; dryCopyR_[i] = dr; liveBlock_[i] = m; }
         }
     }
 
@@ -145,6 +147,8 @@ void PlinkoAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
     const float userDryWet = ep_.dryWet;
     if (inputMode) { ep_.dryWet = 1.0f; engine_.setInput(inRing_.data(), inRingLen_); }
     else             engine_.setInput(nullptr, 0);
+    ep_.holdSeconds = apvts.getRawParameterValue(pid::hold)->load();
+    engine_.setLiveMode(inputMode && liveOn);   // Live = gate the live signal into the buses
     engine_.setParams(ep_);
 
     hits_.clear();
@@ -182,7 +186,8 @@ void PlinkoAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
     buffer.clear();
     float* L = buffer.getWritePointer(0);
     float* R = buffer.getNumChannels() > 1 ? buffer.getWritePointer(1) : L;
-    engine_.process(L, R, n, hits_.data(), (int)hits_.size());
+    const float* livePtr = (inputMode && n <= (int)liveBlock_.size()) ? liveBlock_.data() : nullptr;
+    engine_.process(L, R, n, hits_.data(), (int)hits_.size(), livePtr);
     if (capDry) {                       // input mode: crossfade the live dry signal back in
         const bool stereo = buffer.getNumChannels() > 1;
         const float dw = userDryWet;

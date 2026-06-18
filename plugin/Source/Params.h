@@ -13,6 +13,8 @@ namespace pid {
     static constexpr const char* dryWet      = "dryWet";
     static constexpr const char* level       = "level";
     static constexpr const char* source      = "source";   // 0 = Synth (exciter), 1 = Input, 2 = WAV loop
+    static constexpr const char* inputMode   = "inputMode"; // 0 = Granular (snapshots), 1 = Live (gated)
+    static constexpr const char* hold        = "hold";      // Live mode: gate hold/release time (seconds)
 }
 
 inline juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout() {
@@ -39,7 +41,10 @@ inline juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout
     add(pid::panWidth,    "Width",        NormalisableRange<float>(0.0f, 1.0f),        0.5f);  // noon (modulate wider/narrower)
     add(pid::dryWet,      "Dry/Wet",      NormalisableRange<float>(0.0f, 1.0f),        0.5f);  // half wet
     addSkew(pid::level, "Level", 0.0f, 4.0f, 1.0f);   // unity at noon, up to 4x (~+12 dB headroom)
+    addSkew(pid::hold,  "Hold",  0.05f, 2.0f, 0.3f);  // Live-mode gate hold time; noon ~0.3s
     p.push_back(std::make_unique<AudioParameterChoice>(ParameterID{ pid::source, 1 }, "Source",
                                                        StringArray{ "Synth", "Input", "WAV Loop" }, 0));
+    p.push_back(std::make_unique<AudioParameterChoice>(ParameterID{ pid::inputMode, 1 }, "Input Mode",
+                                                       StringArray{ "Granular", "Live" }, 1));
     return { p.begin(), p.end() };
 }

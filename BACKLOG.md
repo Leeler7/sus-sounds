@@ -187,6 +187,13 @@ PhysicsCore (bulk rebuild on Reset/BulkSet). Per-peg size already exists.
   (ring) + null-safe. ComboBox in the transport row.
 - FOLLOW-UPS: input grains are NOT pitch-shifted (y/pitch ignored for input; only pan/bright/
   level/routing apply) -- could add resampling for pitched grains. No input-gain/trim control yet.
+- LIVE MODE added 2026-06-18: Input Mode param (Granular | Live, default Live). Granular = the
+  original snapshot-grain model (glitchy crumbs). Live = a peg hit opens a per-bus gate (gateD_/gateR_
+  in the engine) that feeds the LIVE ongoing signal into that bus's delay/reverb, shaped by the
+  peg's pan/level/send, released over the **Hold** knob's time. Sounds like a real delay/reverb the
+  board triggers (the user's vision: capture the actual sound, not 0.18s crumbs). Live path is in
+  SoundEngine::process(..., live) fed liveBlock_ from the processor. Tone/brightness NOT yet applied
+  to the live-gated signal (pan/level/send/type/bus do). Hold knob in Master row.
 
 ### Effect buses (per-peg character) — Phase 1 DONE on v0.2-dev 2026-06-18
 - 4 effect buses (kNumBuses, SoundEngine.h). Engine now has per-bus delay lines + reverbs; each

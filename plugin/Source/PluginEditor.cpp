@@ -98,6 +98,12 @@ PlinkoAudioProcessorEditor::PlinkoAudioProcessorEditor(PlinkoAudioProcessor& p)
     sourceAtt_ = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(
         proc_.apvts, pid::source, sourceBox_);
 
+    addAndMakeVisible(inputModeBox_);
+    inputModeBox_.addItem("Granular", 1);
+    inputModeBox_.addItem("Live", 2);
+    inputModeAtt_ = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(
+        proc_.apvts, pid::inputMode, inputModeBox_);
+
     addAndMakeVisible(loadWavBtn_);
     loadWavBtn_.setButtonText("Load WAV");
     loadWavBtn_.onClick = [this] {
@@ -206,6 +212,7 @@ PlinkoAudioProcessorEditor::PlinkoAudioProcessorEditor(PlinkoAudioProcessor& p)
     addKnob(width_,  pid::panWidth, "Stereo");
     addKnob(dryWet_, pid::dryWet,   "Dry/Wet");
     addKnob(level_,  pid::level,    "Level");
+    addKnob(hold_,   pid::hold,     "Hold");
 
     // default to the delay brush (bus presets are initialized in BoardComponent)
     selectBrush(0);
@@ -244,15 +251,16 @@ void PlinkoAudioProcessorEditor::resized() {
     playStop_.setBounds(top.removeFromLeft(80).reduced(2));
     clearBtn_.setBounds(top.removeFromLeft(70).reduced(2));
     revertBtn_.setBounds(top.removeFromLeft(70).reduced(2));
-    sourceBox_.setBounds(top.removeFromLeft(110).reduced(2));
-    loadWavBtn_.setBounds(top.removeFromLeft(90).reduced(2));
-    busBox_.setBounds(top.removeFromLeft(80).reduced(2));
+    sourceBox_.setBounds(top.removeFromLeft(96).reduced(2));
+    inputModeBox_.setBounds(top.removeFromLeft(96).reduced(2));
+    loadWavBtn_.setBounds(top.removeFromLeft(84).reduced(2));
+    busBox_.setBounds(top.removeFromLeft(74).reduced(2));
 
     auto shape = r.removeFromTop(82);   // Shape section
     layRow(shape, { &gravity_, &boardWidth_, &ballSize_, &ballBounce_ });
 
     auto master = r.removeFromBottom(92); // Master section
-    layRow(master, { &tone_, &width_, &dryWet_, &level_ });
+    layRow(master, { &tone_, &width_, &dryWet_, &level_, &hold_ });
 
     auto left  = r.removeFromLeft(180);   // Delay panel
     auto right = r.removeFromRight(180);  // Reverb panel

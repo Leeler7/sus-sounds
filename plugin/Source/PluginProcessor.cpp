@@ -112,7 +112,8 @@ void PlinkoAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
     engine_.process(L, R, n, hits_.data(), (int)hits_.size());
     buffer.applyGain(level);
 
-    ballNX.store(physics_.dbgBallX() / board_.width, std::memory_order_relaxed);
+    const float xMin = kBoardCenterX - board_.width * 0.5f;   // centered span -> 0..1 across the board
+    ballNX.store((physics_.dbgBallX() - xMin) / board_.width, std::memory_order_relaxed);
     ballNY.store(physics_.dbgBallY() / board_.topY, std::memory_order_relaxed);
     ballR.store(physics_.boardParams().ballRadius, std::memory_order_relaxed);
     boardW.store(board_.width, std::memory_order_relaxed);

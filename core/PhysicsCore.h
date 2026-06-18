@@ -25,8 +25,12 @@
 #include "Rng.h"
 #include <box2d/box2d.h>
 
+// The board's fixed center line. Width expands/contracts symmetrically about this x, so the
+// span is [kBoardCenterX - width/2, kBoardCenterX + width/2] and existing pegs stay centered.
+inline constexpr float kBoardCenterX = 0.5f;
+
 struct BoardParams {
-    float width   = 1.0f;     // board spans x in [0, width]
+    float width   = 1.0f;     // board spans x in [center - width/2, center + width/2]
     float topY    = 1.4f;     // y in [0, topY]; drop near top, exit near bottom
     float gravity = 22.0f;    // magnitude; applied as (0, -gravity). (Higher = faster fall but FEWER peg contacts.)
     float ballRadius = 0.03f;   // gaps must exceed the ball diameter for a clean cascade

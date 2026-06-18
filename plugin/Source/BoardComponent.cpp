@@ -38,8 +38,8 @@ void BoardComponent::paint(juce::Graphics& g) {
     g.fillRoundedRectangle(area, 6.0f);
 
     g.setColour(juce::Colours::dimgrey);
-    g.drawLine(sx(0.0f), sy(0.0f), sx(0.0f), sy(board_.topY), 2.0f);
-    g.drawLine(sx(board_.width), sy(0.0f), sx(board_.width), sy(board_.topY), 2.0f);
+    g.drawLine(sx(xMin()), sy(0.0f), sx(xMin()), sy(board_.topY), 2.0f);
+    g.drawLine(sx(xMax()), sy(0.0f), sx(xMax()), sy(board_.topY), 2.0f);
 
     {   // clip ONLY the pegs to the board (overhang hidden). The ball is NEVER clipped.
         juce::Graphics::ScopedSaveState clipState(g);
@@ -58,7 +58,7 @@ void BoardComponent::paint(juce::Graphics& g) {
         }
     }
 
-    float bx = sx(proc_.ballNX.load(std::memory_order_relaxed) * board_.width);
+    float bx = sx(xMin() + proc_.ballNX.load(std::memory_order_relaxed) * board_.width);
     float by = sy(proc_.ballNY.load(std::memory_order_relaxed) * board_.topY);
     float br = proc_.ballR.load(std::memory_order_relaxed) * scale();   // live ball size
     g.setColour(juce::Colours::white);
@@ -97,7 +97,7 @@ int BoardComponent::pegAt(float bx, float by) const {
 bool BoardComponent::addPeg(float bx, float by) {
     if (board_.pegCount >= 128) return false;
     // allow centers right up to the edges so a peg can clip ~half off the board
-    if (bx < 0.0f || bx > board_.width || by < board_.exitY || by > board_.topY)
+    if (bx < xMin() || bx > xMax() || by < board_.exitY || by > board_.topY)
         return false;
     int n = board_.pegCount;
     board_.pegX[n] = bx;
@@ -222,7 +222,7 @@ void BoardComponent::mouseDown(const juce::MouseEvent& e) {
 
 void BoardComponent::mouseDrag(const juce::MouseEvent& e) {
     if (dragDrop_) {                             // move the start point
-        float bx = juce::jlimit(0.05f, board_.width - 0.05f, toBoardX(e.position.x));
+        float bx = juce::jlimit(xMin() + 0.02f, xMax() - 0.02f, toBoardX(e.position.x));
         float by = juce::jlimit(board_.exitY + 0.1f, board_.topY - 0.02f, toBoardY(e.position.y));
         board_.dropX = bx; board_.dropY = by;
         PlinkoAudioProcessor::Edit ed;
@@ -244,7 +244,7 @@ void BoardComponent::mouseDrag(const juce::MouseEvent& e) {
         float dy = toBoardY(e.position.y) - toBoardY(lastDrag_.y);
         lastDrag_ = e.position;
         for (int i : sel_) {
-            board_.pegX[i] = juce::jlimit(0.0f, board_.width, board_.pegX[i] + dx);
+            board_.pegX[i] = juce::jlimit(xMin(), xMax(), board_.pegX[i] + dx);
             board_.pegY[i] = juce::jlimit(board_.exitY, board_.topY, board_.pegY[i] + dy);
         }
         gestureMoved_ = true;
@@ -253,7 +253,7 @@ void BoardComponent::mouseDrag(const juce::MouseEvent& e) {
     }
 
     if (dragIdx_ >= 0) {
-        board_.pegX[dragIdx_] = juce::jlimit(0.0f, board_.width, toBoardX(e.position.x));
+        board_.pegX[dragIdx_] = juce::jlimit(xMin(), xMax(), toBoardX(e.position.x));
         board_.pegY[dragIdx_] = juce::jlimit(board_.exitY, board_.topY, toBoardY(e.position.y));
         gestureMoved_ = true;
         repaint();   // physics catches up on mouse-up (one Move edit, no ball reset)
@@ -383,7 +383,7 @@ void BoardComponent::runMenuOp(int id) {
         case miShrink:   for (int i : sel_) board_.pegRad[i]  = juce::jmax(0.005f, board_.pegRad[i] / 1.25f); break;
         case miBounceUp: for (int i : sel_) board_.pegRest[i] = juce::jmin(2.0f, board_.pegRest[i] + 0.2f); break;
         case miBounceDn: for (int i : sel_) board_.pegRest[i] = juce::jmax(0.0f, board_.pegRest[i] - 0.2f); break;
-        case miMirror:   for (int i : sel_) board_.pegX[i]    = board_.width - board_.pegX[i]; break;
+        case miMirror:   for (int i : sel_) board_.pegX[i]    = 2.0f * kBoardCenterX - board_.pegX[i]; break;  // reflect across the board center
         case miApplyBrush:
             for (int i : sel_) {
                 board_.pegType[i] = brushType_;
@@ -401,7 +401,7 @@ void BoardComponent::runMenuOp(int id) {
             for (int i : src) {
                 if (board_.pegCount >= 128) break;
                 int n = board_.pegCount;
-                board_.pegX[n]    = juce::jlimit(0.0f, board_.width, board_.pegX[i] + off);
+                board_.pegX[n]    = juce::jlimit(xMin(), xMax(), board_.pegX[i] + off);
                 board_.pegY[n]    = juce::jlimit(board_.exitY, board_.topY, board_.pegY[i] - off);
                 board_.pegRest[n] = board_.pegRest[i];
                 board_.pegRad[n]  = board_.pegRad[i];
@@ -436,7 +436,7 @@ void BoardComponent::nudgeSelection(float dx, float dy) {
     if (sel_.empty()) return;
     pushUndo();
     for (int i : sel_) {
-        board_.pegX[i] = juce::jlimit(0.0f, board_.width, board_.pegX[i] + dx);
+        board_.pegX[i] = juce::jlimit(xMin(), xMax(), board_.pegX[i] + dx);
         board_.pegY[i] = juce::jlimit(board_.exitY, board_.topY, board_.pegY[i] + dy);
     }
     pushBulk();

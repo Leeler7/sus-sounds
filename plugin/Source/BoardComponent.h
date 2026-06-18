@@ -46,10 +46,13 @@ private:
         float w = board_.width * s, h = board_.topY * s;
         return { a.getCentreX() - w * 0.5f, a.getCentreY() - h * 0.5f, w, h };
     }
+    // Board spans [xMin, xMax], centered on kBoardCenterX (expands/contracts symmetrically).
+    float xMin() const { return kBoardCenterX - board_.width * 0.5f; }
+    float xMax() const { return kBoardCenterX + board_.width * 0.5f; }
     float scale() const { return boardRect().getWidth() / board_.width; }
-    float sx(float x) const { return boardRect().getX() + x * scale(); }
+    float sx(float x) const { return boardRect().getX() + (x - xMin()) * scale(); }
     float sy(float y) const { return boardRect().getBottom() - y * scale(); }   // y=0 at bottom
-    float toBoardX(float px) const { return (px - boardRect().getX()) / scale(); }
+    float toBoardX(float px) const { return xMin() + (px - boardRect().getX()) / scale(); }
     float toBoardY(float py) const { return (boardRect().getBottom() - py) / scale(); }
 
     int  pegAt(float bx, float by) const;     // index of peg near (bx,by), or -1

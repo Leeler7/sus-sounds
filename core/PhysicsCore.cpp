@@ -96,8 +96,9 @@ void PhysicsWorld::createWalls() {
     wallBody_ = b2CreateBody(world_, &bd);
     b2ShapeDef sd = b2DefaultShapeDef();
     sd.material.restitution = p_.restitution;
-    b2Segment left  = { b2Vec2{ 0.0f, 0.0f },     b2Vec2{ 0.0f, p_.topY } };
-    b2Segment right = { b2Vec2{ p_.width, 0.0f }, b2Vec2{ p_.width, p_.topY } };
+    float half = p_.width * 0.5f, xMin = kBoardCenterX - half, xMax = kBoardCenterX + half;
+    b2Segment left  = { b2Vec2{ xMin, 0.0f }, b2Vec2{ xMin, p_.topY } };
+    b2Segment right = { b2Vec2{ xMax, 0.0f }, b2Vec2{ xMax, p_.topY } };
     b2CreateSegmentShape(wallBody_, &sd, &left);
     b2CreateSegmentShape(wallBody_, &sd, &right);
 }
@@ -109,9 +110,10 @@ void PhysicsWorld::setWidth(float w) {
     p_.width = w;
     b2DestroyBody(wallBody_);                            // rebuild the walls at the new width (ball kept)
     createWalls();
-    // keep the drop point inside the new bounds so the ball never spawns outside a wall
-    if (p_.dropX > w - p_.ballRadius) p_.dropX = w - p_.ballRadius;
-    if (p_.dropX < p_.ballRadius)     p_.dropX = p_.ballRadius;
+    // keep the drop point inside the new (centered) bounds so the ball never spawns outside a wall
+    float half = w * 0.5f, xMin = kBoardCenterX - half, xMax = kBoardCenterX + half;
+    if (p_.dropX > xMax - p_.ballRadius) p_.dropX = xMax - p_.ballRadius;
+    if (p_.dropX < xMin + p_.ballRadius) p_.dropX = xMin + p_.ballRadius;
 }
 
 void PhysicsWorld::createPegBody(int i) {
@@ -241,6 +243,9 @@ void PhysicsWorld::respawn() {
 void PhysicsWorld::stepOnce(std::vector<Collision>& out) {
     b2World_Step(world_, (float)SIM_DT, SUBSTEPS);
 
+    const float half = p_.width * 0.5f;
+    const float xMin = kBoardCenterX - half, xMax = kBoardCenterX + half;
+
     b2ContactEvents ce = b2World_GetContactEvents(world_);
     rawBegins_ += ce.beginCount;   // debug
     for (int i = 0; i < ce.beginCount; ++i) {
@@ -252,7 +257,7 @@ void PhysicsWorld::stepOnce(std::vector<Collision>& out) {
         b2Vec2 vel = b2Body_GetLinearVelocity(ball_);
         Collision c;
         c.t = simTime_;
-        c.nx = clamp01(pos.x / p_.width);
+        c.nx = clamp01((pos.x - xMin) / p_.width);   // 0 = left wall, 1 = right wall (for pan)
         c.ny = clamp01(pos.y / p_.topY);
         c.energy = std::sqrt(vel.x * vel.x + vel.y * vel.y);
         c.loop = loop_;
@@ -289,8 +294,8 @@ void PhysicsWorld::stepOnce(std::vector<Collision>& out) {
         b2Vec2 cp = b2Body_GetPosition(ball_);
         b2Vec2 cv = b2Body_GetLinearVelocity(ball_);
         bool fix = false;
-        if (cp.x < p_.ballRadius)            { cp.x = p_.ballRadius;            if (cv.x < 0) cv.x = -cv.x * 0.5f; fix = true; }
-        if (cp.x > p_.width - p_.ballRadius) { cp.x = p_.width - p_.ballRadius; if (cv.x > 0) cv.x = -cv.x * 0.5f; fix = true; }
+        if (cp.x < xMin + p_.ballRadius) { cp.x = xMin + p_.ballRadius; if (cv.x < 0) cv.x = -cv.x * 0.5f; fix = true; }
+        if (cp.x > xMax - p_.ballRadius) { cp.x = xMax - p_.ballRadius; if (cv.x > 0) cv.x = -cv.x * 0.5f; fix = true; }
         if (cp.y > p_.topY - p_.ballRadius)  { cp.y = p_.topY - p_.ballRadius;  if (cv.y > 0) cv.y = -cv.y * 0.5f; fix = true; }
         if (fix) { b2Body_SetTransform(ball_, cp, b2MakeRot(0.0f)); b2Body_SetLinearVelocity(ball_, cv); }
     }

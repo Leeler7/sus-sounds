@@ -116,8 +116,10 @@ context to pick up cold.
   GUI syncs board_.width from a boardW atomic each frame (aspect + normalization). Pegs keep
   absolute x (pegs beyond a shrunk width are unreachable + clipped, non-destructive). The Master
   "Width" (pan) knob was renamed "Stereo" to disambiguate from the new Shape "Width".
-- POSSIBLE FOLLOW-UP: widening only adds room on the right (left wall fixed at 0). If symmetric
-  growth / recenter is wanted, revisit.
+- SYMMETRIC (2026-06-18): board now spans [center - w/2, center + w/2] about a fixed
+  kBoardCenterX=0.5, so it expands/contracts equally both sides with existing pegs staying
+  centered. Pegs keep absolute x (no data shift); coordinate mapping (walls, containment,
+  pan nx, ball normalization, GUI sx/toBoardX + clamps, mirror) all offset by xMin.
 
 ### UI reorg into SECTIONS (the big GUI build) — user request 2026-06-18
 Reorganize the editor into clear sections instead of one knob row:

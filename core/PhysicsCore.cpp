@@ -23,6 +23,7 @@ void makeStaggeredBoard(BoardParams& p, int rows, int cols) {
 }
 
 void PhysicsWorld::init(uint64_t seed, const BoardParams& params) {
+    if (inited_) { b2DestroyWorld(world_); inited_ = false; }  // re-init: free the old world
     p_ = params;
     baseSeed_ = seed;
     loop_ = 0;

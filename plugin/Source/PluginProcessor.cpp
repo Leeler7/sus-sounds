@@ -16,8 +16,14 @@ PlinkoAudioProcessor::PlinkoAudioProcessor()
 
 void PlinkoAudioProcessor::prepareToPlay(double sampleRate, int) {
     sr_ = sampleRate;
-    physics_.init(12345, board_);
+    physics_.init(kSeed, board_);
     engine_.prepare(sampleRate, ep_);
+}
+
+void PlinkoAudioProcessor::commitBoard(const BoardParams& nb) {
+    const juce::ScopedLock sl(boardLock_);
+    pendingBoard_ = nb;
+    boardDirty_.store(true, std::memory_order_release);
 }
 
 bool PlinkoAudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const {
@@ -31,6 +37,18 @@ bool PlinkoAudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) co
 void PlinkoAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer&) {
     juce::ScopedNoDenormals noDenormals;
     const int n = buffer.getNumSamples();
+
+    // Apply a pending board edit (re-init physics). Try-lock so we never block the GUI;
+    // if we can't grab it this block, we'll catch it next block. (Re-init allocates -- a
+    // brief, acceptable cost on an explicit edit; the lock-free body-pool path is backlogged.)
+    if (boardDirty_.load(std::memory_order_acquire)) {
+        const juce::ScopedTryLock stl(boardLock_);
+        if (stl.isLocked()) {
+            board_ = pendingBoard_;
+            physics_.init(kSeed, board_);
+            boardDirty_.store(false, std::memory_order_release);
+        }
+    }
 
     // pull live params
     ep_.feedback    = apvts.getRawParameterValue(pid::feedback)->load();

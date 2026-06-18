@@ -40,6 +40,10 @@ public:
     const BoardParams& board() const { return board_; }
     std::atomic<float> ballNX{ 0.5f }, ballNY{ 1.0f };  // normalized ball position (lock-free)
 
+    // GUI thread: commit an edited board. The audio thread swaps it in and re-inits
+    // the physics on the next block (try-lock, so the audio thread never blocks).
+    void commitBoard(const BoardParams& nb);
+
 private:
     BoardParams board_;
     PhysicsWorld physics_;
@@ -48,6 +52,11 @@ private:
     double sr_ = 44100.0;
     std::vector<Collision> ev_;
     std::vector<ScheduledHit> hits_;
+
+    juce::CriticalSection boardLock_;
+    BoardParams pendingBoard_;
+    std::atomic<bool> boardDirty_{ false };
+    static constexpr uint64_t kSeed = 12345;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PlinkoAudioProcessor)
 };

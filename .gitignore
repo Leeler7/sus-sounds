@@ -1,5 +1,6 @@
 # CMake build output + fetched Box2D (large, regenerable)
 spike/xplat/build/
+core/build/
 
 # generated audio (regenerate: python spike_plinko.py / spike_tempo.py)
 spike/out/

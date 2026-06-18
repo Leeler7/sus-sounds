@@ -1,0 +1,96 @@
+// PhysicsCore.h -- deterministic, sample-rate-independent Plinko physics (T1).
+//
+// JUCE-free on purpose: this is pure logic + Box2D v3, so it unit-tests in isolation
+// and drops into the plugin later. Determinism invariants (ARCHITECTURE.md §2, §2.1):
+//   - Box2D v3.1.1, no -ffast-math/FMA (set in CMake).
+//   - Fixed sim timestep (SIM_DT), advanced by an accumulator keyed to ELAPSED TIME,
+//     not audio sample count -> identical physics at 44.1/48/96k AND independent of
+//     the caller's block size.
+//   - Portable PCG32 RNG (Rng.h) for the no-stuck nudge only.
+//
+//   TIME MODEL
+//   caller: advance(seconds)          // however the audio thread chunks time
+//     accum += seconds
+//     while (accum >= SIM_DT):        // fixed steps -> block-size invariant
+//        stepOnce(); accum -= SIM_DT
+//
+//   BALL LIFECYCLE
+//   [drop] -> FALLING --hit peg--> emit Collision --\
+//      ^                                            |
+//      |  low energy -> seeded nudge                |
+//      \-- exit (y<=exitY) OR timeout -> reset() ---/
+#pragma once
+#include <cstdint>
+#include <vector>
+#include "Rng.h"
+#include <box2d/box2d.h>
+
+struct BoardParams {
+    float width   = 1.0f;     // board spans x in [0, width]
+    float topY    = 1.4f;     // y in [0, topY]; drop near top, exit near bottom
+    float gravity = 10.0f;    // magnitude; applied as (0, -gravity)
+    float ballRadius = 0.035f; // gaps must exceed the ball diameter for a clean cascade
+    float pegRadius  = 0.04f;
+    float restitution = 0.55f;// <1 so the ball sheds energy and descends (not endless bounce)
+    float dropX = 0.5f;       // drop onto the apex peg -> deflects left/right (classic Plinko)
+    float dropY = 1.33f;
+    float exitY = 0.04f;      // ball below this = exited -> respawn
+    float energyFloor = 0.05f;// below this speed = "slow"
+    float nudge = 0.4f;       // desired horizontal velocity kick when genuinely stuck (m/s)
+    int   stuckSteps = 250;   // must be slow this many sim steps (~0.25s) before nudging
+    double maxLoopSeconds = 8.0; // hard timeout backstop -> teleport+respawn
+
+    int   pegCount = 0;
+    float pegX[128];
+    float pegY[128];
+};
+
+struct Collision {
+    double t;      // seconds since init (monotonic sim time)
+    float  nx, ny; // normalized board position [0,1]
+    float  energy; // ball speed at contact
+    int    loop;   // which loop iteration produced it
+};
+
+// Fill p with a deterministic staggered Plinko grid (no RNG -> layout is data, not chance).
+void makeStaggeredBoard(BoardParams& p, int rows = 11, int cols = 5);
+
+class PhysicsWorld {
+public:
+    void init(uint64_t seed, const BoardParams& params);
+    void shutdown();
+    ~PhysicsWorld();
+
+    // Advance the simulation by `seconds`, appending any collisions to `out`.
+    void advance(double seconds, std::vector<Collision>& out);
+
+    int    loopIndex() const { return loop_; }
+    double simTime()   const { return simTime_; }
+
+    // debug probes (T1 bring-up)
+    float     dbgBallY();
+    int       dbgPegCount() const { return p_.pegCount; }
+    long long dbgRawBegins() const { return rawBegins_; }
+
+private:
+    static constexpr double SIM_DT = 1.0 / 1000.0; // fixed 1 kHz sim step
+    static constexpr int    SUBSTEPS = 4;
+
+    void stepOnce(std::vector<Collision>& out);
+    void respawn();
+
+    BoardParams p_{};
+    uint64_t baseSeed_ = 0;
+    Pcg32 rng_{};
+    int loop_ = 0;
+    double elapsed_ = 0.0;   // total time fed in (accumulated)
+    long long steps_ = 0;    // sim steps taken so far (target derived by round-to-nearest)
+    double simTime_ = 0.0;
+    double loopStart_ = 0.0;
+    long long rawBegins_ = 0;   // debug: total raw begin-touch events seen
+    int slowCount_ = 0;         // consecutive sim steps the ball has been "slow"
+
+    b2WorldId world_{};
+    b2BodyId  ball_{};
+    bool      inited_ = false;
+};

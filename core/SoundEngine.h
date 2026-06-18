@@ -11,12 +11,14 @@
 #include <vector>
 #include "PhysicsCore.h"
 
+inline constexpr int kNumBuses = 4;   // effect buses: each peg routes to one; each has its own character
+
 struct EngineParams {
     double bpm = 120.0;
-    float feedback   = 0.78f;  // delay feedback (echo decay) -- high so echoes ring/overlap
-    float delayMix   = 0.5f;   // wet delay level
-    float reverbMix  = 0.5f;   // wet reverb level
-    float reverbDecay= 0.92f;  // reverb comb feedback (long tail, fills gaps between hits)
+    float feedback   [kNumBuses] = { 0.62f, 0.62f, 0.62f, 0.62f };  // per-bus delay feedback (echo decay)
+    float delayMix   [kNumBuses] = { 0.5f,  0.5f,  0.5f,  0.5f  };  // per-bus wet delay level
+    float reverbMix  [kNumBuses] = { 0.5f,  0.5f,  0.5f,  0.5f  };  // per-bus wet reverb level
+    float reverbDecay[kNumBuses] = { 0.85f, 0.85f, 0.85f, 0.85f };  // per-bus reverb size (comb feedback)
     float dryWet     = 0.5f;   // 0 = dry (tones/input), 1 = fully wet (delay+reverb)
     float panWidth   = 1.0f;   // 1 = full width, 0 = mono-center
     int   rootMidi   = 57;     // A3
@@ -33,6 +35,7 @@ struct Hit {
     float brightness;
     int   type;        // 0 = delay, 1 = reverb
     int   inputStart;  // input mode: absolute input sample to start this grain from
+    int   bus = 0;     // which effect bus this peg routes to (0..kNumBuses-1)
 };
 
 struct ScheduledHit { int offset; Hit hit; };  // offset = sample within the block
@@ -62,11 +65,12 @@ private:
         bool   fromInput = false;   // read input audio instead of synthesizing
         int    inPos = 0;           // absolute read index into input
         float  lp = 0.0f, lpCoef = 1.0f;  // one-pole lowpass (brightness)
+        int    bus = 0;             // effect bus this voice feeds
     };
     static constexpr int NV = 64;
 
     void startVoice(const Hit& h);
-    float reverbProcess(float in);
+    float reverbProcess(int bus, float in);
 
     double sr_ = 44100.0;
     EngineParams ep_{};
@@ -76,7 +80,7 @@ private:
     int   inLen_ = 0;
     bool  useInput_ = false;
 
-    std::vector<float> dL_, dR_;  int dlen_ = 1, dpos_ = 0;          // stereo feedback delay
-    std::vector<float> comb_[4];  int combLen_[4]{}, combPos_[4]{};  // reverb combs
-    std::vector<float> ap_[2];    int apLen_[2]{},  apPos_[2]{};     // reverb allpasses
+    std::vector<float> dL_[kNumBuses], dR_[kNumBuses];  int dlen_ = 1, dpos_[kNumBuses]{};   // per-bus stereo delay
+    std::vector<float> comb_[kNumBuses][4];  int combLen_[4]{}, combPos_[kNumBuses][4]{};    // per-bus reverb combs
+    std::vector<float> ap_[kNumBuses][2];    int apLen_[2]{},  apPos_[kNumBuses][2]{};       // per-bus allpasses
 };

@@ -33,11 +33,15 @@ private:
     Knob gravity_, boardWidth_, ballSize_, ballBounce_;    // Shape
     juce::TextButton delayBrushBtn_;                        // Delay panel
     juce::Slider delayBounce_, delaySize_;  juce::Label delayBounceL_, delaySizeL_;
-    Knob feedback_, delayMix_;
+    juce::Slider feedback_, delayMix_;       juce::Label feedbackL_, delayMixL_;     // per-bus (active bus)
     juce::TextButton reverbBrushBtn_;                       // Reverb panel
     juce::Slider reverbBounce_, reverbSize_; juce::Label reverbBounceL_, reverbSizeL_;
-    Knob reverbDecay_, reverbMix_;
+    juce::Slider reverbDecay_, reverbMix_;   juce::Label reverbDecayL_, reverbMixL_; // per-bus (active bus)
     Knob tone_, width_, dryWet_, level_;                    // Master
+
+    juce::ComboBox busBox_;   // active effect bus (drives the brush + the per-bus sliders above)
+    int activeBus_ = 0;
+    void reloadBusSliders();  // load the per-bus sliders from the active bus's processor values
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PlinkoAudioProcessorEditor)
 };

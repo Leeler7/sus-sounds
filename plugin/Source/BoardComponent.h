@@ -26,6 +26,7 @@ public:
     void setBrushType(int t)              { brushType_ = t; }
     void setBrushBounce(int type, float v){ brushBounce_[type & 1] = v; }
     void setBrushSize(int type, float v)  { brushSize_[type & 1]  = v; }
+    void setBrushBus(int b)               { brushBus_ = b; }   // effect bus for newly placed pegs
     int  brushType() const                { return brushType_; }
 
     void paint(juce::Graphics&) override;
@@ -90,4 +91,5 @@ private:
     int brushType_ = 0;                       // 0 = delay, 1 = reverb (for new pegs)
     float brushBounce_[2] = { 1.0f, 1.0f };   // [delay, reverb] new-peg bounce (1 = neutral)
     float brushSize_[2]   = { 0.0225f, 0.0225f };// [delay, reverb] new-peg size
+    int   brushBus_ = 0;                          // effect bus for newly placed pegs
 };

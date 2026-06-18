@@ -62,6 +62,7 @@ struct BoardParams {
     float pegRest[128];       // per-peg restitution (bounce). > 1.0 = extra energy (bumper-like).
     float pegRad[128];        // per-peg radius (size)
     int   pegType[128];       // per-peg routing: 0 = delay peg (rhythmic echo), 1 = reverb peg (splash)
+    int   pegBus[128];        // per-peg effect bus (0..kNumBuses-1): which delay/reverb character
 };
 
 struct Collision {
@@ -70,6 +71,7 @@ struct Collision {
     float  energy; // ball speed at contact
     int    loop;   // which loop iteration produced it
     int    type;   // peg type hit: 0 = delay, 1 = reverb
+    int    peg;    // index of the peg hit (into BoardParams arrays) -> per-peg settings lookup
 };
 
 // Fill p with a deterministic staggered Plinko grid (no RNG -> layout is data, not chance).
@@ -95,7 +97,7 @@ public:
 
     // live control (GUI) -- these modify the running world WITHOUT re-init (ball preserved)
     void setGravity(float g);
-    bool addPeg(float x, float y, float rest, int type, float radius);  // false if full
+    bool addPeg(float x, float y, float rest, int type, float radius, int bus);  // false if full
     void movePeg(int i, float x, float y);
     void removePeg(int i);
     void setPegType(int i, int type);

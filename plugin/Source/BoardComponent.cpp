@@ -10,9 +10,13 @@ namespace {
         miGrow, miShrink, miBounceUp, miBounceDn,
         miMirror, miDuplicate, miApplyBrush,
         miAlignRow, miAlignCol, miDistH, miDistV,
-        miDelete
+        miDelete,
+        miBus1 = 20, miBus2, miBus3, miBus4
     };
     constexpr float kDragSlop = 4.0f;   // px: below this a press+release is a click, not a drag
+    // bus 0 = default (no ring); buses 1..3 get a colored ring so assignments are visible
+    const juce::Colour kBusRing[4] = { juce::Colour(0xff9aa0a6), juce::Colour(0xffb388ff),
+                                       juce::Colour(0xff4dd0e1), juce::Colour(0xffffb74d) };
 }
 
 BoardComponent::BoardComponent(PlinkoAudioProcessor& p) : proc_(p) {
@@ -55,6 +59,11 @@ void BoardComponent::paint(juce::Graphics& g) {
                                                       : juce::Colour(0xffe0a458);  // delay  = amber
             g.setColour(c);
             g.fillEllipse(cx - pr, cy - pr, pr * 2.0f, pr * 2.0f);
+            int bus = board_.pegBus[i];                   // colored ring shows the effect bus (>0)
+            if (bus > 0 && bus < 4) {
+                g.setColour(kBusRing[bus]);
+                g.drawEllipse(cx - pr - 2.0f, cy - pr - 2.0f, (pr + 2.0f) * 2.0f, (pr + 2.0f) * 2.0f, 1.5f);
+            }
         }
     }
 
@@ -104,7 +113,8 @@ bool BoardComponent::addPeg(float bx, float by) {
     board_.pegY[n] = by;
     board_.pegType[n] = brushType_;                  // active brush decides type...
     board_.pegRest[n] = brushBounce_[brushType_];    // ...bounce...
-    board_.pegRad[n]  = brushSize_[brushType_];      // ...and size
+    board_.pegRad[n]  = brushSize_[brushType_];      // ...size...
+    board_.pegBus[n]  = brushBus_;                   // ...and effect bus
     board_.pegCount = n + 1;
     return true;
 }
@@ -274,6 +284,7 @@ void BoardComponent::mouseUp(const juce::MouseEvent& e) {
                 ed.type = EditType::Add;
                 ed.x = board_.pegX[idx]; ed.y = board_.pegY[idx];
                 ed.rest = board_.pegRest[idx]; ed.pegType = board_.pegType[idx]; ed.radius = board_.pegRad[idx];
+                ed.bus = board_.pegBus[idx];
                 proc_.pushEdit(ed);
             }
         } else {                                                  // a drag -> marquee select
@@ -346,6 +357,9 @@ void BoardComponent::showContextMenu(const juce::MouseEvent& e) {
     m.addItem(miDuplicate, "Duplicate" + cnt());
     m.addItem(miApplyBrush, "Apply " + juce::String(brushType_ == 0 ? "Delay" : "Reverb") + " brush");
     m.addSubMenu("Align & distribute", alignM);
+    juce::PopupMenu busM;
+    for (int b = 0; b < 4; ++b) busM.addItem(miBus1 + b, "Bus " + juce::String(b + 1));
+    m.addSubMenu("Assign to bus", busM);
     m.addSeparator();
     m.addItem(miDelete, "Delete" + cnt());
 
@@ -390,6 +404,9 @@ void BoardComponent::runMenuOp(int id) {
                 board_.pegRest[i] = brushBounce_[brushType_];
                 board_.pegRad[i]  = brushSize_[brushType_];
             }
+            break;
+        case miBus1: case miBus2: case miBus3: case miBus4:
+            for (int i : sel_) board_.pegBus[i] = id - miBus1;
             break;
         case miAlignRow: { float s = 0; for (int i : sel_) s += board_.pegY[i]; float a = s / sel_.size(); for (int i : sel_) board_.pegY[i] = a; } break;
         case miAlignCol: { float s = 0; for (int i : sel_) s += board_.pegX[i]; float a = s / sel_.size(); for (int i : sel_) board_.pegX[i] = a; } break;

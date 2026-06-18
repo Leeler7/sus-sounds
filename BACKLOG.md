@@ -177,6 +177,19 @@ PhysicsCore (bulk rebuild on Reset/BulkSet). Per-peg size already exists.
 - FOLLOW-UPS: input grains are NOT pitch-shifted (y/pitch ignored for input; only pan/bright/
   level/routing apply) -- could add resampling for pitched grains. No input-gain/trim control yet.
 
+### Effect buses (per-peg character) — Phase 1 DONE on v0.2-dev 2026-06-18
+- 4 effect buses (kNumBuses, SoundEngine.h). Engine now has per-bus delay lines + reverbs; each
+  bus has its own feedback / delayMix / reverbDecay / reverbMix. Voice/Hit carry `bus`. Per-peg
+  `pegBus` in BoardParams; Collision carries `peg` index (peg shape userData now encodes INDEX, kept
+  in sync on swap-remove, so type/bus are looked up from the arrays). Bus effect params are
+  NON-APVTS atomics in the processor (busFeedback_[] etc.); GUI Bus selector + per-bus sliders edit
+  the active bus; brush places new pegs on the active bus; right-click "Assign to bus"; colored ring
+  shows bus (>0). Chosen over per-voice (cost: per-voice scales with polyphony x effect complexity +
+  echo-tail voice-budget blowup; buses are fixed-cost and scale with future hall/shimmer/tape).
+- PHASE 2 (deferred): per-peg send + level + tone; per-bus delay TIME / effect TYPE selectors.
+- NOTE: bus effect params aren't persisted (non-APVTS); Standalone opens at defaults anyway, but a
+  VST3 in a DAW won't recall them yet -> move to APVTS (or save in state) when persistence matters.
+
 ## Open product questions to revisit
 
 - **Transport-stopped behavior:** when the DAW transport stops, should the ball freeze or

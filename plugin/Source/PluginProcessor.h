@@ -43,12 +43,14 @@ public:
     std::atomic<float> ballNX{ 0.5f }, ballNY{ 1.0f };  // normalized ball position (lock-free)
     std::atomic<float> ballR{ 0.03f };                  // live ball radius (board units) for the GUI
     std::atomic<float> boardW{ 1.0f };                  // live board width for the GUI (aspect + normalization)
+    // Per-bus effect character (GUI writes, audio reads). Non-APVTS: edited via the bus panel.
+    std::atomic<float> busFeedback_[kNumBuses], busDelayMix_[kNumBuses], busReverbDecay_[kNumBuses], busReverbMix_[kNumBuses];
 
     // GUI thread: enqueue a single live peg edit. The audio thread applies it to the
     // running physics next block (no re-init -> the ball keeps flowing).
     enum class EditType { Add, Move, Delete, SetType, SetDrop, Clear, Reset, BulkSet };
     struct Edit {
-        EditType type; int idx = 0; float x = 0, y = 0, rest = 0.5f; int pegType = 0; float radius = 0.022f;
+        EditType type; int idx = 0; float x = 0, y = 0, rest = 0.5f; int pegType = 0; float radius = 0.022f; int bus = 0;
         std::shared_ptr<BoardParams> snapshot;  // BulkSet: full peg set to rebuild (bulk edits + undo)
     };
     void pushEdit(const Edit& e);

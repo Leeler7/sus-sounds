@@ -25,6 +25,7 @@ void makeStaggeredBoard(BoardParams& p, int rows, int cols) {
                 p.pegRest[n] = p.restitution;
                 p.pegRad[n] = p.pegRadius;
                 p.pegType[n] = (r % 2 == 0) ? 0 : 1;  // alternate rows: delay / reverb / delay ...
+                p.pegBus[n] = 0;                      // default: all pegs on bus 0
                 ++n;
             }
         }
@@ -124,7 +125,7 @@ void PhysicsWorld::createPegBody(int i) {
     b2ShapeDef sd = b2DefaultShapeDef();
     sd.material.restitution = p_.pegRest[i];                          // >1 = bumper
     sd.enableContactEvents = true;
-    sd.userData = (void*)(intptr_t)(p_.pegType[i] + 1);              // non-null = peg; encodes type
+    sd.userData = (void*)(intptr_t)(i + 1);                          // non-null = peg; encodes its INDEX
     pegShape_[i] = b2CreateCircleShape(pegBody_[i], &sd, &c);
 }
 
@@ -161,10 +162,10 @@ void PhysicsWorld::setBallSize(float r) {
     ballShape_ = b2CreateCircleShape(ball_, &sd, &c);
 }
 
-bool PhysicsWorld::addPeg(float x, float y, float rest, int type, float radius) {
+bool PhysicsWorld::addPeg(float x, float y, float rest, int type, float radius, int bus) {
     if (!inited_ || p_.pegCount >= 128) return false;
     int i = p_.pegCount;
-    p_.pegX[i] = x; p_.pegY[i] = y; p_.pegRest[i] = rest; p_.pegType[i] = type; p_.pegRad[i] = radius;
+    p_.pegX[i] = x; p_.pegY[i] = y; p_.pegRest[i] = rest; p_.pegType[i] = type; p_.pegRad[i] = radius; p_.pegBus[i] = bus;
     createPegBody(i);
     p_.pegCount = i + 1;
     return true;
@@ -183,15 +184,16 @@ void PhysicsWorld::removePeg(int i) {
     if (i != last) {   // swap the last peg into slot i (keeps arrays compact)
         p_.pegX[i] = p_.pegX[last]; p_.pegY[i] = p_.pegY[last];
         p_.pegRest[i] = p_.pegRest[last]; p_.pegRad[i] = p_.pegRad[last]; p_.pegType[i] = p_.pegType[last];
+        p_.pegBus[i] = p_.pegBus[last];
         pegBody_[i] = pegBody_[last]; pegShape_[i] = pegShape_[last];
+        b2Shape_SetUserData(pegShape_[i], (void*)(intptr_t)(i + 1));   // userData tracks the new slot
     }
     p_.pegCount = last;
 }
 
 void PhysicsWorld::setPegType(int i, int type) {
     if (!inited_ || i < 0 || i >= p_.pegCount) return;
-    p_.pegType[i] = type;
-    b2Shape_SetUserData(pegShape_[i], (void*)(intptr_t)(type + 1));
+    p_.pegType[i] = type;   // userData encodes the peg INDEX (not type), so it stays unchanged
 }
 
 void PhysicsWorld::setDropPoint(float x, float y) { p_.dropX = x; p_.dropY = y; }
@@ -210,7 +212,7 @@ void PhysicsWorld::setPegs(const BoardParams& src) {
         for (int i = 0; i < src.pegCount; ++i) {
             p_.pegX[i] = src.pegX[i];   p_.pegY[i] = src.pegY[i];
             p_.pegRest[i] = src.pegRest[i]; p_.pegRad[i] = src.pegRad[i];
-            p_.pegType[i] = src.pegType[i];
+            p_.pegType[i] = src.pegType[i]; p_.pegBus[i] = src.pegBus[i];
         }
     };
     if (!inited_) { copyPegs(); return; }
@@ -253,6 +255,8 @@ void PhysicsWorld::stepOnce(std::vector<Collision>& out) {
         void* ub = b2Shape_GetUserData(ce.beginEvents[i].shapeIdB);
         void* pegUd = ua ? ua : ub;   // non-null userData = the peg shape (walls/ball are null)
         if (!pegUd) continue;         // ball-wall contact -- not a tap
+        int idx = (int)(intptr_t)pegUd - 1;          // userData encodes the peg INDEX (+1)
+        if (idx < 0 || idx >= p_.pegCount) continue; // stale (shouldn't happen)
         b2Vec2 pos = b2Body_GetPosition(ball_);
         b2Vec2 vel = b2Body_GetLinearVelocity(ball_);
         Collision c;
@@ -261,7 +265,8 @@ void PhysicsWorld::stepOnce(std::vector<Collision>& out) {
         c.ny = clamp01(pos.y / p_.topY);
         c.energy = std::sqrt(vel.x * vel.x + vel.y * vel.y);
         c.loop = loop_;
-        c.type = (int)(intptr_t)pegUd - 1;   // userData encodes (type+1): 1->delay, 2->reverb
+        c.type = p_.pegType[idx];                    // type from the peg (userData now carries index)
+        c.peg  = idx;
         out.push_back(c);
     }
 

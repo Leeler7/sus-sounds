@@ -6,6 +6,12 @@ PlinkoAudioProcessor::PlinkoAudioProcessor()
         .withInput("Input", juce::AudioChannelSet::stereo(), true)
         .withOutput("Output", juce::AudioChannelSet::stereo(), true)) {
     board_ = defaultBoard();
+    for (int b = 0; b < kNumBuses; ++b) {   // per-bus effect defaults (match the old global defaults)
+        busFeedback_[b]    = 0.62f;
+        busDelayMix_[b]    = 0.5f;
+        busReverbDecay_[b] = 0.85f;
+        busReverbMix_[b]   = 0.5f;
+    }
     ev_.reserve(512);
     hits_.reserve(512);
     pendingEdits_.reserve(256);
@@ -96,7 +102,7 @@ void PlinkoAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
             hasEdits_.store(false, std::memory_order_release);
             for (const auto& e : applyBuf_) {
                 switch (e.type) {
-                    case EditType::Add:     physics_.addPeg(e.x, e.y, e.rest, e.pegType, e.radius); break;
+                    case EditType::Add:     physics_.addPeg(e.x, e.y, e.rest, e.pegType, e.radius, e.bus); break;
                     case EditType::Move:    physics_.movePeg(e.idx, e.x, e.y); break;
                     case EditType::Delete:  physics_.removePeg(e.idx); break;
                     case EditType::SetType: physics_.setPegType(e.idx, e.pegType); break;
@@ -112,10 +118,12 @@ void PlinkoAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
     }
 
     // pull live params
-    ep_.feedback    = apvts.getRawParameterValue(pid::feedback)->load();
-    ep_.delayMix    = apvts.getRawParameterValue(pid::delayMix)->load();
-    ep_.reverbMix   = apvts.getRawParameterValue(pid::reverbMix)->load();
-    ep_.reverbDecay = apvts.getRawParameterValue(pid::reverbDecay)->load();
+    for (int b = 0; b < kNumBuses; ++b) {   // per-bus effect character
+        ep_.feedback[b]    = busFeedback_[b].load(std::memory_order_relaxed);
+        ep_.delayMix[b]    = busDelayMix_[b].load(std::memory_order_relaxed);
+        ep_.reverbMix[b]   = busReverbMix_[b].load(std::memory_order_relaxed);
+        ep_.reverbDecay[b] = busReverbDecay_[b].load(std::memory_order_relaxed);
+    }
     ep_.tone        = apvts.getRawParameterValue(pid::tone)->load();
     ep_.panWidth    = apvts.getRawParameterValue(pid::panWidth)->load();
     ep_.dryWet      = apvts.getRawParameterValue(pid::dryWet)->load();
@@ -148,6 +156,8 @@ void PlinkoAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
             ScheduledHit sh;
             sh.offset = off;
             sh.hit = pegToTap(c, ep_);
+            sh.hit.bus = (c.peg >= 0 && c.peg < physics_.boardParams().pegCount)
+                       ? physics_.boardParams().pegBus[c.peg] : 0;
             if (inputMode) {          // grab the last ~grainSeconds of the input at this hit
                 int gl = (int)(ep_.grainSeconds * sr_);
                 sh.hit.inputStart = ((w0 + off - gl) % inRingLen_ + inRingLen_) % inRingLen_;

@@ -22,7 +22,6 @@ void BoardComponent::paint(juce::Graphics& g) {
         float cx = sx(board_.pegX[i]), cy = sy(board_.pegY[i]);
         juce::Colour c = (board_.pegType[i] == 1) ? juce::Colour(0xff5bc0be)   // reverb = teal
                                                   : juce::Colour(0xffe0a458);  // delay  = amber
-        if (board_.pegRest[i] > 1.0f) c = juce::Colour(0xffff4d6d);            // bumper = red
         g.setColour(c);
         g.fillEllipse(cx - pr, cy - pr, pr * 2.0f, pr * 2.0f);
     }
@@ -33,10 +32,17 @@ void BoardComponent::paint(juce::Graphics& g) {
     g.setColour(juce::Colours::white);
     g.fillEllipse(bx - br, by - br, br * 2.0f, br * 2.0f);
 
+    if (!proc_.running_.load()) {   // stopped: highlight the ball as the draggable start point
+        g.setColour(juce::Colour(0xff5bc0be));
+        g.drawEllipse(bx - br * 1.6f, by - br * 1.6f, br * 3.2f, br * 3.2f, 2.0f);
+    }
+
     g.setColour(juce::Colours::white.withAlpha(0.35f));
     g.setFont(12.0f);
-    g.drawText("click: add   drag: move   right-click: delete   double-click: delay/reverb",
-               area.reduced(6.0f).removeFromTop(16.0f), juce::Justification::centredLeft);
+    const char* hint = proc_.running_.load()
+        ? "click: add   drag: move   right-click/drag: delete   double-click: delay/reverb"
+        : "stopped — drag the ball to set the start point";
+    g.drawText(hint, area.reduced(6.0f).removeFromTop(16.0f), juce::Justification::centredLeft);
 }
 
 int BoardComponent::pegAt(float bx, float by) const {
@@ -83,6 +89,12 @@ void BoardComponent::eraseAt(int i) {
 
 void BoardComponent::mouseDown(const juce::MouseEvent& e) {
     float bx = toBoardX(e.position.x), by = toBoardY(e.position.y);
+
+    if (!proc_.running_.load() && !e.mods.isRightButtonDown()) {  // grab the start point
+        float dx = bx - board_.dropX, dy = by - board_.dropY, rr = board_.ballRadius * 2.0f;
+        if (dx * dx + dy * dy < rr * rr) { dragDrop_ = true; return; }
+    }
+
     int hit = pegAt(bx, by);
 
     if (e.mods.isRightButtonDown()) {            // right = erase (also sweepable via drag)
@@ -104,6 +116,17 @@ void BoardComponent::mouseDown(const juce::MouseEvent& e) {
 }
 
 void BoardComponent::mouseDrag(const juce::MouseEvent& e) {
+    if (dragDrop_) {                             // move the start point
+        float bx = juce::jlimit(0.05f, board_.width - 0.05f, toBoardX(e.position.x));
+        float by = juce::jlimit(board_.exitY + 0.1f, board_.topY - 0.02f, toBoardY(e.position.y));
+        board_.dropX = bx; board_.dropY = by;
+        PlinkoAudioProcessor::Edit ed;
+        ed.type = PlinkoAudioProcessor::EditType::SetDrop;
+        ed.x = bx; ed.y = by;
+        proc_.pushEdit(ed);
+        repaint();
+        return;
+    }
     if (e.mods.isRightButtonDown()) {            // sweep-erase: delete pegs as the cursor passes
         int hit = pegAt(toBoardX(e.position.x), toBoardY(e.position.y));
         if (hit >= 0) eraseAt(hit);
@@ -118,6 +141,7 @@ void BoardComponent::mouseDrag(const juce::MouseEvent& e) {
 }
 
 void BoardComponent::mouseUp(const juce::MouseEvent&) {
+    if (dragDrop_) { dragDrop_ = false; return; }
     if (dragIdx_ < 0) return;
     PlinkoAudioProcessor::Edit ed;
     ed.type = PlinkoAudioProcessor::EditType::Move;

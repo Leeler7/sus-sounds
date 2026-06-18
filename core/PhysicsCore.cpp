@@ -133,6 +133,15 @@ void PhysicsWorld::setPegType(int i, int type) {
     b2Shape_SetUserData(pegShape_[i], (void*)(intptr_t)(type + 1));
 }
 
+void PhysicsWorld::setDropPoint(float x, float y) { p_.dropX = x; p_.dropY = y; }
+
+void PhysicsWorld::holdAtDrop() {
+    if (!inited_) return;
+    b2Body_SetTransform(ball_, b2Vec2{ p_.dropX, p_.dropY }, b2MakeRot(0.0f));
+    b2Body_SetLinearVelocity(ball_, b2Vec2{ 0.0f, 0.0f });
+    b2Body_SetAngularVelocity(ball_, 0.0f);
+}
+
 void PhysicsWorld::respawn() {
     ++loop_;
     // reseed deterministically from (baseSeed, loopIndex) so each loop is reproducible

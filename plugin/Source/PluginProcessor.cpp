@@ -52,6 +52,7 @@ void PlinkoAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
                     case EditType::Move:    physics_.movePeg(e.idx, e.x, e.y); break;
                     case EditType::Delete:  physics_.removePeg(e.idx); break;
                     case EditType::SetType: physics_.setPegType(e.idx, e.pegType); break;
+                    case EditType::SetDrop: physics_.setDropPoint(e.x, e.y); break;
                 }
             }
             applyBuf_.clear();
@@ -73,21 +74,24 @@ void PlinkoAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
     physics_.setGravity(gravity);
     engine_.setParams(ep_);
 
-    // advance physics by exactly this block's duration
-    const double t0 = physics_.simTime();
-    ev_.clear();
-    physics_.advance((double)n / sr_, ev_);
-
     hits_.clear();
-    for (const auto& c : ev_) {
-        int off = (int)((c.t - t0) * sr_ + 0.5);
-        if (off < 0) off = 0;
-        if (off >= n) off = n - 1;
-        ScheduledHit sh;
-        sh.offset = off;
-        sh.hit = pegToTap(c, ep_);
-        sh.hit.inputStart = 0;   // exciter mode (input path is a later GUI pass)
-        hits_.push_back(sh);
+    if (running_.load(std::memory_order_relaxed)) {
+        // advance physics by exactly this block's duration
+        const double t0 = physics_.simTime();
+        ev_.clear();
+        physics_.advance((double)n / sr_, ev_);
+        for (const auto& c : ev_) {
+            int off = (int)((c.t - t0) * sr_ + 0.5);
+            if (off < 0) off = 0;
+            if (off >= n) off = n - 1;
+            ScheduledHit sh;
+            sh.offset = off;
+            sh.hit = pegToTap(c, ep_);
+            sh.hit.inputStart = 0;   // exciter mode (input path is a later GUI pass)
+            hits_.push_back(sh);
+        }
+    } else {
+        physics_.holdAtDrop();       // stopped: ball waits at the (draggable) start point
     }
 
     buffer.clear();

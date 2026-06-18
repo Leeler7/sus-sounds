@@ -39,4 +39,5 @@ private:
     PlinkoAudioProcessor& proc_;
     BoardParams board_;     // editable working copy (authoritative for drawing/editing)
     int dragIdx_ = -1;
+    bool dragDrop_ = false; // dragging the start point (only while stopped)
 };

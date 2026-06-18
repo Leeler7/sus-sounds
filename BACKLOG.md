@@ -109,6 +109,19 @@ context to pick up cold.
   (FDN reverbs, Dattorro plate, Freeverb family) rather than hand-rolling from scratch.
 - **Priority:** P2. Best done once the JUCE shell + GUI exist so types are A/B-able by ear.
 
+## GUI follow-ups
+
+### Peg Parameter Interface (per-peg editing) — user request 2026-06-17
+- **What:** A UI to select a peg and adjust its per-peg properties: **bounce** (restitution —
+  there is NO separate "bumper type"; every peg just has adjustable bounciness), delay-vs-reverb
+  type, and (future) per-peg pitch/pan/filter overrides. Likely: click-select a peg → a small
+  inspector panel (or radial menu) with sliders, or scroll-over-peg to nudge bounce.
+- **Why:** bounce is already a per-peg value in the data model (BoardParams.pegRest[]) but the
+  GUI can't set it yet (new pegs all default to 0.5). This is how the player shapes a board's
+  feel. (The red "bumper" coloring was removed — pegs are amber=delay/teal=reverb; bounce is a
+  property, not a type.)
+- **Priority:** P2, after start/stop.
+
 ## Open product questions to revisit
 
 - **Transport-stopped behavior:** when the DAW transport stops, should the ball freeze or

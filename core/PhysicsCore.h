@@ -90,6 +90,8 @@ public:
     void movePeg(int i, float x, float y);
     void removePeg(int i);
     void setPegType(int i, int type);
+    void setDropPoint(float x, float y);   // where the ball starts
+    void holdAtDrop();                     // park the ball at the drop point (used while stopped)
     int  pegCount() const { return p_.pegCount; }
     const BoardParams& boardParams() const { return p_; }
 

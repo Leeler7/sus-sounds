@@ -52,6 +52,7 @@ struct BoardParams {
     float pegRest[128];       // per-peg restitution. Defaults to `restitution`; > 1.0 makes a
                               // "bumper" that returns EXTRA energy (like a pinball bumper).
                               // Keep <= ~1.6 so the ball can't gain runaway energy.
+    int   pegType[128];       // per-peg routing: 0 = delay peg (rhythmic echo), 1 = reverb peg (splash)
 };
 
 struct Collision {
@@ -59,6 +60,7 @@ struct Collision {
     float  nx, ny; // normalized board position [0,1]
     float  energy; // ball speed at contact
     int    loop;   // which loop iteration produced it
+    int    type;   // peg type hit: 0 = delay, 1 = reverb
 };
 
 // Fill p with a deterministic staggered Plinko grid (no RNG -> layout is data, not chance).
@@ -98,6 +100,7 @@ private:
     double loopStart_ = 0.0;
     long long rawBegins_ = 0;   // debug: total raw begin-touch events seen
     int slowCount_ = 0;         // consecutive sim steps the ball has been "slow"
+    int pegInfo_[128] = {0};    // per-peg type, addressed via shape userData (non-null = peg)
 
     b2WorldId world_{};
     b2BodyId  ball_{};

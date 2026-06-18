@@ -3,10 +3,6 @@
 
 static inline float clamp01(float v) { return v < 0.0f ? 0.0f : (v > 1.0f ? 1.0f : v); }
 
-// Tag used to mark peg shapes so a contact event can be identified as a peg hit
-// (vs a wall), independent of Box2D's enable-flag semantics. Its address is the marker.
-static int PEG_MARKER = 1;
-
 void makeStaggeredBoard(BoardParams& p, int rows, int cols) {
     int n = 0;
     for (int r = 0; r < rows && n < 128; ++r) {
@@ -18,6 +14,7 @@ void makeStaggeredBoard(BoardParams& p, int rows, int cols) {
                 p.pegX[n] = x;
                 p.pegY[n] = y;
                 p.pegRest[n] = p.restitution;  // default; caller can raise individual pegs to bumpers
+                p.pegType[n] = 0;              // default delay peg; caller can mark reverb pegs
                 ++n;
             }
         }
@@ -59,10 +56,11 @@ void PhysicsWorld::init(uint64_t seed, const BoardParams& params) {
         bd.position = b2Vec2{ p_.pegX[i], p_.pegY[i] };
         b2BodyId peg = b2CreateBody(world_, &bd);
         b2Circle c = { b2Vec2{ 0.0f, 0.0f }, p_.pegRadius };
+        pegInfo_[i] = p_.pegType[i];
         b2ShapeDef sd = b2DefaultShapeDef();
         sd.material.restitution = p_.pegRest[i];  // per-peg: > 1.0 = bumper (extra energy)
         sd.enableContactEvents = true;
-        sd.userData = &PEG_MARKER;   // tag: this is a peg
+        sd.userData = &pegInfo_[i];  // non-null userData = peg; points to its type (0/1)
         b2CreateCircleShape(peg, &sd, &c);
     }
 
@@ -113,11 +111,10 @@ void PhysicsWorld::stepOnce(std::vector<Collision>& out) {
     b2ContactEvents ce = b2World_GetContactEvents(world_);
     rawBegins_ += ce.beginCount;   // debug
     for (int i = 0; i < ce.beginCount; ++i) {
-        b2ShapeId sa = ce.beginEvents[i].shapeIdA;
-        b2ShapeId sb = ce.beginEvents[i].shapeIdB;
-        bool pegHit = (b2Shape_GetUserData(sa) == &PEG_MARKER) ||
-                      (b2Shape_GetUserData(sb) == &PEG_MARKER);
-        if (!pegHit) continue;   // ignore wall contacts -- only pegs become taps
+        void* ua = b2Shape_GetUserData(ce.beginEvents[i].shapeIdA);
+        void* ub = b2Shape_GetUserData(ce.beginEvents[i].shapeIdB);
+        void* pegUd = ua ? ua : ub;   // non-null userData = the peg shape (walls/ball are null)
+        if (!pegUd) continue;         // ball-wall contact -- not a tap
         b2Vec2 pos = b2Body_GetPosition(ball_);
         b2Vec2 vel = b2Body_GetLinearVelocity(ball_);
         Collision c;
@@ -126,6 +123,7 @@ void PhysicsWorld::stepOnce(std::vector<Collision>& out) {
         c.ny = clamp01(pos.y / p_.topY);
         c.energy = std::sqrt(vel.x * vel.x + vel.y * vel.y);
         c.loop = loop_;
+        c.type = *static_cast<int*>(pegUd);   // 0 = delay peg, 1 = reverb peg
         out.push_back(c);
     }
 

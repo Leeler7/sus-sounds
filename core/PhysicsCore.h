@@ -49,6 +49,9 @@ struct BoardParams {
     int   pegCount = 0;
     float pegX[128];
     float pegY[128];
+    float pegRest[128];       // per-peg restitution. Defaults to `restitution`; > 1.0 makes a
+                              // "bumper" that returns EXTRA energy (like a pinball bumper).
+                              // Keep <= ~1.6 so the ball can't gain runaway energy.
 };
 
 struct Collision {

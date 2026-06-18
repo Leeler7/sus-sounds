@@ -170,6 +170,12 @@ The only randomness is the no-stuck nudge. Rules (eng review 2026-06-17):
   loop restart; consume the stream ONLY inside the sample-driven physics step. No mid-stream
   RNG state to serialize.
 
+**Per-peg bounce / bumper (in the core as of T1):** each peg also carries its own
+restitution. > 1.0 makes a pinball-style **bumper** that returns EXTRA energy — fun, and it
+doubles as a liveliness tool (counteracts energy loss / the ball resting on a peg). Map a
+bumper hit to an *accented* tap (louder + brighter) so the bumper is heard, not just seen.
+Cap around 1.6 so the ball can't gain runaway energy. (User idea, 2026-06-17.)
+
 **Global controls (these are the automatable macro params, Section 6):** Key/Scale,
 Pitch Range, Pan Width, Filter Amount, Feedback, Reverb Send, Dry/Wet, Loop Length (bars),
 Gravity, Ball Size, Drop-Point X, **Sync Mode**.

@@ -20,9 +20,7 @@ struct RunResult {
     int    pegs = 0;
 };
 
-static RunResult run(uint64_t seed, double chunk, int nCalls) {
-    BoardParams p;
-    makeStaggeredBoard(p);
+static RunResult runBoard(uint64_t seed, BoardParams p, double chunk, int nCalls) {
     PhysicsWorld w;
     w.init(seed, p);
     RunResult r;
@@ -32,6 +30,12 @@ static RunResult run(uint64_t seed, double chunk, int nCalls) {
     r.ballY = w.dbgBallY();
     w.shutdown();
     return r;
+}
+
+static RunResult run(uint64_t seed, double chunk, int nCalls) {
+    BoardParams p;
+    makeStaggeredBoard(p);
+    return runBoard(seed, p, chunk, nCalls);
 }
 
 // Feed EXACTLY totalSeconds of sim time, delivered in audio blocks of `blockSamples`
@@ -86,10 +90,20 @@ int main() {
     auto sr480 = runSR(12345, 48000.0, 128, 10.0);
     auto sr960 = runSR(12345, 96000.0, 256, 10.0);
 
+    // Bumper pegs: per-peg restitution > 1 returns extra energy. Must stay deterministic
+    // AND visibly change the dynamics vs the same board without bumpers.
+    BoardParams pb; makeStaggeredBoard(pb);
+    for (int i = 0; i < pb.pegCount; ++i) if (i % 4 == 0) pb.pegRest[i] = 1.4f;
+    auto bumpA = runBoard(2024, pb, DT, 6000);
+    auto bumpB = runBoard(2024, pb, DT, 6000);
+    auto plain = run(2024, DT, 6000);
+
     bool det  = bitSame(A.ev, B.ev);
     bool blk  = bitSame(A.ev, C.ev);
     bool srInv = bitSame(sr441.ev, sr480.ev) && bitSame(sr441.ev, sr960.ev);
     bool live = (A.ev.size() >= 10) && (A.loops >= 1);
+    bool bumpDet = bitSame(bumpA.ev, bumpB.ev);            // bumpers still deterministic
+    bool bumpEffect = !bitSame(bumpA.ev, plain.ev);        // bumpers actually change things
 
     std::printf("[board] pegs=%d  events(10s)=%zu  loops=%d  finalBallY=%.3f\n",
                 A.pegs, A.ev.size(), A.loops, A.ballY);
@@ -99,8 +113,11 @@ int main() {
     std::printf("rng determinism (same seed = same):      %s\n", rngDet  ? "PASS" : "FAIL");
     std::printf("rng sensitivity (diff seed = diff):      %s\n", rngSens ? "PASS" : "FAIL");
     std::printf("liveliness (cascades + loops, not inert):%s\n", live    ? "PASS" : "FAIL");
+    std::printf("bumper pegs deterministic:               %s\n", bumpDet ? "PASS" : "FAIL");
+    std::printf("bumper pegs change dynamics:             %s  (plain=%zu bumper=%zu hits)\n",
+                bumpEffect ? "PASS" : "FAIL", plain.ev.size(), bumpA.ev.size());
 
-    bool ok = det && blk && srInv && rngDet && rngSens && live;
+    bool ok = det && blk && srInv && rngDet && rngSens && live && bumpDet && bumpEffect;
     std::printf("RESULT: %s\n", ok ? "ALL PASS" : "FAILED");
     return ok ? 0 : 1;
 }

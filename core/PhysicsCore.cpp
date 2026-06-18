@@ -17,6 +17,7 @@ void makeStaggeredBoard(BoardParams& p, int rows, int cols) {
             if (x > 0.06f && x < p.width - 0.06f) {
                 p.pegX[n] = x;
                 p.pegY[n] = y;
+                p.pegRest[n] = p.restitution;  // default; caller can raise individual pegs to bumpers
                 ++n;
             }
         }
@@ -59,7 +60,7 @@ void PhysicsWorld::init(uint64_t seed, const BoardParams& params) {
         b2BodyId peg = b2CreateBody(world_, &bd);
         b2Circle c = { b2Vec2{ 0.0f, 0.0f }, p_.pegRadius };
         b2ShapeDef sd = b2DefaultShapeDef();
-        sd.material.restitution = p_.restitution;
+        sd.material.restitution = p_.pegRest[i];  // per-peg: > 1.0 = bumper (extra energy)
         sd.enableContactEvents = true;
         sd.userData = &PEG_MARKER;   // tag: this is a peg
         b2CreateCircleShape(peg, &sd, &c);

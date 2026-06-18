@@ -82,7 +82,8 @@ void SoundEngine::startVoice(const Hit& h) {
     v.panR = h.panR;
     v.type = h.type;
     v.env = 1.0f;
-    v.envMul = std::exp(-1.0f / (ep_.grainSeconds * (float)sr_));
+    // decay to ~0.1% by grainSeconds, so grainSeconds is the real grain LENGTH
+    v.envMul = std::exp(-6.9f / (ep_.grainSeconds * (float)sr_));
     v.atkN = (int)(0.002 * sr_);   // 2 ms attack (fast, but click-free)
     v.atkPos = 0;
     v.fromInput = useInput_;        // effect path: play a grain of the input

@@ -28,7 +28,7 @@
 struct BoardParams {
     float width   = 1.0f;     // board spans x in [0, width]
     float topY    = 1.4f;     // y in [0, topY]; drop near top, exit near bottom
-    float gravity = 22.0f;    // magnitude; applied as (0, -gravity). Higher = decisive descent.
+    float gravity = 22.0f;    // magnitude; applied as (0, -gravity). (Higher = faster fall but FEWER peg contacts.)
     float ballRadius = 0.035f; // gaps must exceed the ball diameter for a clean cascade
     float pegRadius  = 0.04f;
     float restitution = 0.5f; // middle ground. NOTE: cascade richness still needs by-ear

@@ -13,6 +13,7 @@ int main(int argc, char** argv) {
     const std::string out = (argc > 1) ? argv[1] : "engine_demo.wav";
     const std::string inPath = (argc > 2) ? argv[2] : "";
     const bool useInput = !inPath.empty();
+    const bool wetOnly = (argc > 3) && std::string(argv[3]) == "wet";  // no dry passthrough
 
     double sr = 44100.0;
     std::vector<float> inMono;
@@ -42,7 +43,7 @@ int main(int argc, char** argv) {
     std::vector<ScheduledHit> hits;
     size_t consumed = 0;
     int delayHits = 0, revHits = 0;
-    const float dryPass = 0.7f;
+    const float dryPass = wetOnly ? 0.0f : 0.7f;   // 100% wet = no source passthrough
 
     for (int s = 0; s < total; s += block) {
         int n = (block < total - s) ? block : (total - s);

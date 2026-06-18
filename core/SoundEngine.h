@@ -13,15 +13,16 @@
 
 struct EngineParams {
     double bpm = 120.0;
-    float feedback   = 0.45f;  // delay feedback (echo decay)
+    float feedback   = 0.78f;  // delay feedback (echo decay) -- high so echoes ring/overlap
     float delayMix   = 0.5f;   // wet delay level
-    float reverbMix  = 0.4f;   // wet reverb level
-    float reverbDecay= 0.82f;  // reverb comb feedback (tail length)
+    float reverbMix  = 0.5f;   // wet reverb level
+    float reverbDecay= 0.92f;  // reverb comb feedback (long tail, fills gaps between hits)
     float dryMix     = 0.9f;   // dry grain level
     float panWidth   = 1.0f;   // 1 = full width, 0 = mono-center
     int   rootMidi   = 57;     // A3
     int   pitchRangeOct = 3;   // y spans this many octaves of the scale
-    float grainSeconds = 0.45f;// grain decay time (fast attack, this decay)
+    float grainSeconds = 0.18f;// grain LENGTH (fast attack, decays to ~silence by here).
+                               // Short = distinct percussive echoes; long = a continuous smear.
 };
 
 struct Hit {

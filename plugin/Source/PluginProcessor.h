@@ -44,7 +44,7 @@ public:
     // GUI thread: enqueue a single live peg edit. The audio thread applies it to the
     // running physics next block (no re-init -> the ball keeps flowing).
     enum class EditType { Add, Move, Delete, SetType, SetDrop, Clear, Reset };
-    struct Edit { EditType type; int idx = 0; float x = 0, y = 0, rest = 0.5f; int pegType = 0; };
+    struct Edit { EditType type; int idx = 0; float x = 0, y = 0, rest = 0.5f; int pegType = 0; float radius = 0.022f; };
     void pushEdit(const Edit& e);
 
     std::atomic<bool> running_{ true };  // false = ball parked at the (draggable) start point

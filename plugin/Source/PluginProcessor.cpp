@@ -52,7 +52,7 @@ void PlinkoAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
             hasEdits_.store(false, std::memory_order_release);
             for (const auto& e : applyBuf_) {
                 switch (e.type) {
-                    case EditType::Add:     physics_.addPeg(e.x, e.y, e.rest, e.pegType); break;
+                    case EditType::Add:     physics_.addPeg(e.x, e.y, e.rest, e.pegType, e.radius); break;
                     case EditType::Move:    physics_.movePeg(e.idx, e.x, e.y); break;
                     case EditType::Delete:  physics_.removePeg(e.idx); break;
                     case EditType::SetType: physics_.setPegType(e.idx, e.pegType); break;
@@ -78,6 +78,8 @@ void PlinkoAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
     const float level   = apvts.getRawParameterValue(pid::level)->load();
 
     physics_.setGravity(gravity);
+    physics_.setBallBounce(apvts.getRawParameterValue(pid::ballBounce)->load());
+    physics_.setBallSize(apvts.getRawParameterValue(pid::ballSize)->load());
     engine_.setParams(ep_);
 
     hits_.clear();

@@ -15,6 +15,7 @@ void makeStaggeredBoard(BoardParams& p, int rows, int cols) {
                 p.pegX[n] = x;
                 p.pegY[n] = y;
                 p.pegRest[n] = p.restitution;
+                p.pegRad[n] = p.pegRadius;
                 p.pegType[n] = (r % 2 == 0) ? 0 : 1;  // alternate rows: delay / reverb / delay ...
                 ++n;
             }
@@ -79,7 +80,7 @@ void PhysicsWorld::createPegBody(int i) {
     b2BodyDef bd = b2DefaultBodyDef();
     bd.position = b2Vec2{ p_.pegX[i], p_.pegY[i] };
     pegBody_[i] = b2CreateBody(world_, &bd);
-    b2Circle c = { b2Vec2{ 0.0f, 0.0f }, p_.pegRadius };
+    b2Circle c = { b2Vec2{ 0.0f, 0.0f }, p_.pegRad[i] };             // per-peg size
     b2ShapeDef sd = b2DefaultShapeDef();
     sd.material.restitution = p_.pegRest[i];                          // >1 = bumper
     sd.enableContactEvents = true;
@@ -94,17 +95,24 @@ void PhysicsWorld::createBall() {
     ball_ = b2CreateBody(world_, &bd);
     b2Circle c = { b2Vec2{ 0.0f, 0.0f }, p_.ballRadius };
     b2ShapeDef sd = b2DefaultShapeDef();
-    sd.material.restitution = p_.restitution;
+    sd.material.restitution = p_.ballRest;          // ball's own bounce
     sd.density = 1.0f;
     sd.enableContactEvents = true;                  // needed for the ball-peg contact to report
-    b2CreateCircleShape(ball_, &sd, &c);
+    ballShape_ = b2CreateCircleShape(ball_, &sd, &c);
     b2Body_SetLinearVelocity(ball_, b2Vec2{ p_.initialVx, 0.0f });  // break symmetry at drop
 }
 
-bool PhysicsWorld::addPeg(float x, float y, float rest, int type) {
+void PhysicsWorld::setBallBounce(float r) {
+    p_.ballRest = r;
+    if (inited_) b2Shape_SetRestitution(ballShape_, r);   // live
+}
+
+void PhysicsWorld::setBallSize(float r) { p_.ballRadius = r; }   // applies on the next drop
+
+bool PhysicsWorld::addPeg(float x, float y, float rest, int type, float radius) {
     if (!inited_ || p_.pegCount >= 128) return false;
     int i = p_.pegCount;
-    p_.pegX[i] = x; p_.pegY[i] = y; p_.pegRest[i] = rest; p_.pegType[i] = type;
+    p_.pegX[i] = x; p_.pegY[i] = y; p_.pegRest[i] = rest; p_.pegType[i] = type; p_.pegRad[i] = radius;
     createPegBody(i);
     p_.pegCount = i + 1;
     return true;
@@ -122,7 +130,7 @@ void PhysicsWorld::removePeg(int i) {
     int last = p_.pegCount - 1;
     if (i != last) {   // swap the last peg into slot i (keeps arrays compact)
         p_.pegX[i] = p_.pegX[last]; p_.pegY[i] = p_.pegY[last];
-        p_.pegRest[i] = p_.pegRest[last]; p_.pegType[i] = p_.pegType[last];
+        p_.pegRest[i] = p_.pegRest[last]; p_.pegRad[i] = p_.pegRad[last]; p_.pegType[i] = p_.pegType[last];
         pegBody_[i] = pegBody_[last]; pegShape_[i] = pegShape_[last];
     }
     p_.pegCount = last;

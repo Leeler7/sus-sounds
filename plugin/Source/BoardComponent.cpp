@@ -17,8 +17,8 @@ void BoardComponent::paint(juce::Graphics& g) {
     g.drawLine(sx(0.0f), sy(0.0f), sx(0.0f), sy(board_.topY), 2.0f);
     g.drawLine(sx(board_.width), sy(0.0f), sx(board_.width), sy(board_.topY), 2.0f);
 
-    float pr = board_.pegRadius * scale();
     for (int i = 0; i < board_.pegCount; ++i) {
+        float pr = board_.pegRad[i] * scale();   // per-peg size
         float cx = sx(board_.pegX[i]), cy = sy(board_.pegY[i]);
         juce::Colour c = (board_.pegType[i] == 1) ? juce::Colour(0xff5bc0be)   // reverb = teal
                                                   : juce::Colour(0xffe0a458);  // delay  = amber
@@ -64,7 +64,8 @@ bool BoardComponent::addPeg(float bx, float by) {
     board_.pegX[n] = bx;
     board_.pegY[n] = by;
     board_.pegRest[n] = board_.restitution;
-    board_.pegType[n] = 0;   // new pegs default to delay
+    board_.pegType[n] = 0;          // (Phase 2: set by the active brush)
+    board_.pegRad[n] = board_.pegRadius;
     board_.pegCount = n + 1;
     return true;
 }
@@ -125,6 +126,7 @@ void BoardComponent::mouseDown(const juce::MouseEvent& e) {
         ed.type = PlinkoAudioProcessor::EditType::Add;
         ed.x = board_.pegX[idx]; ed.y = board_.pegY[idx];
         ed.rest = board_.pegRest[idx]; ed.pegType = board_.pegType[idx];
+        ed.radius = board_.pegRad[idx];
         proc_.pushEdit(ed);
         dragIdx_ = idx;
         repaint();

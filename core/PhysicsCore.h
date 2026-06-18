@@ -30,7 +30,8 @@ struct BoardParams {
     float topY    = 1.4f;     // y in [0, topY]; drop near top, exit near bottom
     float gravity = 22.0f;    // magnitude; applied as (0, -gravity). (Higher = faster fall but FEWER peg contacts.)
     float ballRadius = 0.03f;   // gaps must exceed the ball diameter for a clean cascade
-    float pegRadius  = 0.022f;  // smaller than the ball (reads as distinct dots; user builds the board)
+    float ballRest   = 0.5f;    // ball springiness (its own restitution, separate from pegs)
+    float pegRadius  = 0.022f;  // DEFAULT peg size for new pegs / makeStaggeredBoard
     float restitution = 0.5f; // middle ground. NOTE: cascade richness still needs by-ear
                               // tuning once audio is wired (the deterministic core is correct;
                               // a near-centered landing can still balance on a peg until the
@@ -49,9 +50,8 @@ struct BoardParams {
     int   pegCount = 0;
     float pegX[128];
     float pegY[128];
-    float pegRest[128];       // per-peg restitution. Defaults to `restitution`; > 1.0 makes a
-                              // "bumper" that returns EXTRA energy (like a pinball bumper).
-                              // Keep <= ~1.6 so the ball can't gain runaway energy.
+    float pegRest[128];       // per-peg restitution (bounce). > 1.0 = extra energy (bumper-like).
+    float pegRad[128];        // per-peg radius (size)
     int   pegType[128];       // per-peg routing: 0 = delay peg (rhythmic echo), 1 = reverb peg (splash)
 };
 
@@ -86,10 +86,12 @@ public:
 
     // live control (GUI) -- these modify the running world WITHOUT re-init (ball preserved)
     void setGravity(float g);
-    bool addPeg(float x, float y, float rest, int type);  // false if full
+    bool addPeg(float x, float y, float rest, int type, float radius);  // false if full
     void movePeg(int i, float x, float y);
     void removePeg(int i);
     void setPegType(int i, int type);
+    void setBallBounce(float r);   // live ball restitution
+    void setBallSize(float r);     // ball radius (applies on next drop)
     void setDropPoint(float x, float y);   // where the ball starts
     void holdAtDrop();                     // park the ball at the drop point (used while stopped)
     void clearPegs();                      // remove all pegs (ball keeps running)
@@ -120,5 +122,6 @@ private:
 
     b2WorldId world_{};
     b2BodyId  ball_{};
+    b2ShapeId ballShape_{};
     bool      inited_ = false;
 };

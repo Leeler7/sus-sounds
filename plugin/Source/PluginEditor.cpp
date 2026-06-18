@@ -32,10 +32,18 @@ void PlinkoAudioProcessorEditor::addBrush(juce::Slider& s, juce::Label& l, const
 }
 
 void PlinkoAudioProcessorEditor::reloadBusSliders() {
+    // effect character (from the processor's per-bus atomics)
     feedback_.setValue(proc_.busFeedback_[activeBus_].load(),       juce::dontSendNotification);
     delayMix_.setValue(proc_.busDelayMix_[activeBus_].load(),       juce::dontSendNotification);
     reverbDecay_.setValue(proc_.busReverbDecay_[activeBus_].load(), juce::dontSendNotification);
     reverbMix_.setValue(proc_.busReverbMix_[activeBus_].load(),     juce::dontSendNotification);
+    // brush bounce/size (from this bus's memory) + push to the board's active brush
+    delayBounce_.setValue(busBounce_[activeBus_][0],  juce::dontSendNotification);
+    delaySize_.setValue(busSize_[activeBus_][0],      juce::dontSendNotification);
+    reverbBounce_.setValue(busBounce_[activeBus_][1], juce::dontSendNotification);
+    reverbSize_.setValue(busSize_[activeBus_][1],     juce::dontSendNotification);
+    board_.setBrushBounce(0, busBounce_[activeBus_][0]); board_.setBrushSize(0, busSize_[activeBus_][0]);
+    board_.setBrushBounce(1, busBounce_[activeBus_][1]); board_.setBrushSize(1, busSize_[activeBus_][1]);
 }
 
 void PlinkoAudioProcessorEditor::selectBrush(int type) {
@@ -47,6 +55,11 @@ void PlinkoAudioProcessorEditor::selectBrush(int type) {
 PlinkoAudioProcessorEditor::PlinkoAudioProcessorEditor(PlinkoAudioProcessor& p)
     : AudioProcessorEditor(&p), proc_(p), board_(p) {
     addAndMakeVisible(board_);
+
+    for (int b = 0; b < kNumBuses; ++b) {   // per-bus brush defaults (bounce 1, size 0.0225)
+        busBounce_[b][0] = busBounce_[b][1] = 1.0f;
+        busSize_[b][0]   = busSize_[b][1]   = 0.0225f;
+    }
 
     addAndMakeVisible(playStop_);
     playStop_.setButtonText(proc_.running_.load() ? "Stop" : "Start");
@@ -62,11 +75,11 @@ PlinkoAudioProcessorEditor::PlinkoAudioProcessorEditor(PlinkoAudioProcessor& p)
     revertBtn_.onClick = [this] {
         for (auto* prm : proc_.getParameters())          // all knobs back to default
             prm->setValueNotifyingHost(prm->getDefaultValue());
-        delayBounce_.setValue(1.0);  delaySize_.setValue(0.0225);   // brushes back to default
-        reverbBounce_.setValue(1.0); reverbSize_.setValue(0.0225);
-        for (int b = 0; b < kNumBuses; ++b) {            // per-bus effects back to default
+        for (int b = 0; b < kNumBuses; ++b) {            // ALL per-bus peg settings back to default
             proc_.busFeedback_[b] = 0.62f; proc_.busDelayMix_[b] = 0.5f;
             proc_.busReverbDecay_[b] = 0.85f; proc_.busReverbMix_[b] = 0.5f;
+            busBounce_[b][0] = busBounce_[b][1] = 1.0f;
+            busSize_[b][0]   = busSize_[b][1]   = 0.0225f;
         }
         busBox_.setSelectedId(1, juce::dontSendNotification); activeBus_ = 0;
         reloadBusSliders();
@@ -126,8 +139,8 @@ PlinkoAudioProcessorEditor::PlinkoAudioProcessorEditor(PlinkoAudioProcessor& p)
     addAndMakeVisible(delayBrushBtn_);
     delayBrushBtn_.setButtonText("Delay Brush");
     delayBrushBtn_.onClick = [this] { selectBrush(0); };
-    addBrush(delayBounce_, delayBounceL_, "Bounce", 0.0, 2.0, 1.0,  [this](double v) { board_.setBrushBounce(0, (float)v); });
-    addBrush(delaySize_,   delaySizeL_,   "Size",   0.005, 0.06, 0.0225, [this](double v) { board_.setBrushSize(0, (float)v); });
+    addBrush(delayBounce_, delayBounceL_, "Bounce", 0.0, 2.0, 1.0,  [this](double v) { busBounce_[activeBus_][0] = (float)v; board_.setBrushBounce(0, (float)v); });
+    addBrush(delaySize_,   delaySizeL_,   "Size",   0.005, 0.06, 0.0225, [this](double v) { busSize_[activeBus_][0] = (float)v; board_.setBrushSize(0, (float)v); });
     delaySize_.setSkewFactorFromMidPoint(0.0225);   // default peg size at noon (matches the board)
 
     // Per-bus effect sliders (edit the ACTIVE bus; non-APVTS, written straight to the processor).
@@ -151,8 +164,8 @@ PlinkoAudioProcessorEditor::PlinkoAudioProcessorEditor(PlinkoAudioProcessor& p)
     addAndMakeVisible(reverbBrushBtn_);
     reverbBrushBtn_.setButtonText("Reverb Brush");
     reverbBrushBtn_.onClick = [this] { selectBrush(1); };
-    addBrush(reverbBounce_, reverbBounceL_, "Bounce", 0.0, 2.0, 1.0,  [this](double v) { board_.setBrushBounce(1, (float)v); });
-    addBrush(reverbSize_,   reverbSizeL_,   "Size",   0.005, 0.06, 0.0225, [this](double v) { board_.setBrushSize(1, (float)v); });
+    addBrush(reverbBounce_, reverbBounceL_, "Bounce", 0.0, 2.0, 1.0,  [this](double v) { busBounce_[activeBus_][1] = (float)v; board_.setBrushBounce(1, (float)v); });
+    addBrush(reverbSize_,   reverbSizeL_,   "Size",   0.005, 0.06, 0.0225, [this](double v) { busSize_[activeBus_][1] = (float)v; board_.setBrushSize(1, (float)v); });
     reverbSize_.setSkewFactorFromMidPoint(0.0225);   // default peg size at noon (matches the board)
     setupBus(reverbDecay_, reverbDecayL_, "Rev Size", 0.5, 0.95, 0.85);
     reverbDecay_.onValueChange = [this] { proc_.busReverbDecay_[activeBus_].store((float)reverbDecay_.getValue()); };

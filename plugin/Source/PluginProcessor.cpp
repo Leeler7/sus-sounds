@@ -110,6 +110,7 @@ void PlinkoAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
 
     ballNX.store(physics_.dbgBallX() / board_.width, std::memory_order_relaxed);
     ballNY.store(physics_.dbgBallY() / board_.topY, std::memory_order_relaxed);
+    ballR.store(physics_.boardParams().ballRadius, std::memory_order_relaxed);
 }
 
 juce::AudioProcessorEditor* PlinkoAudioProcessor::createEditor() {

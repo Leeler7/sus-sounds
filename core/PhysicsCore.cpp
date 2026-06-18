@@ -108,7 +108,18 @@ void PhysicsWorld::setBallBounce(float r) {
     if (inited_) b2Shape_SetRestitution(ballShape_, r);   // live
 }
 
-void PhysicsWorld::setBallSize(float r) { p_.ballRadius = r; }   // applies on the next drop
+void PhysicsWorld::setBallSize(float r) {
+    if (!inited_) { p_.ballRadius = r; return; }
+    if (std::fabs(r - p_.ballRadius) < 1e-5f) return;   // unchanged
+    p_.ballRadius = r;
+    b2DestroyShape(ballShape_, true);                   // resize live (keeps body pos/velocity)
+    b2Circle c = { b2Vec2{ 0.0f, 0.0f }, r };
+    b2ShapeDef sd = b2DefaultShapeDef();
+    sd.material.restitution = p_.ballRest;
+    sd.density = 1.0f;
+    sd.enableContactEvents = true;
+    ballShape_ = b2CreateCircleShape(ball_, &sd, &c);
+}
 
 bool PhysicsWorld::addPeg(float x, float y, float rest, int type, float radius) {
     if (!inited_ || p_.pegCount >= 128) return false;

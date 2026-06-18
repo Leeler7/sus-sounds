@@ -28,7 +28,7 @@ inline juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout
         p.push_back(std::make_unique<AudioParameterFloat>(ParameterID{ pid::gravity, 1 }, "Gravity", g, 10.0f));
     }
     add(pid::ballSize,    "Ball Size",    NormalisableRange<float>(0.015f, 0.06f),     0.03f);
-    add(pid::ballBounce,  "Ball Bounce",  NormalisableRange<float>(0.0f, 0.95f),       0.5f);
+    add(pid::ballBounce,  "Ball Bounce",  NormalisableRange<float>(0.0f, 2.0f),        1.0f);
     add(pid::feedback,    "Feedback",     NormalisableRange<float>(0.0f, 0.95f),       0.62f);
     add(pid::delayMix,    "Delay Mix",    NormalisableRange<float>(0.0f, 1.0f),        0.5f);
     add(pid::reverbMix,   "Reverb Mix",   NormalisableRange<float>(0.0f, 1.0f),        0.45f);

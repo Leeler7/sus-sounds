@@ -28,7 +28,7 @@ void BoardComponent::paint(juce::Graphics& g) {
 
     float bx = sx(proc_.ballNX.load(std::memory_order_relaxed) * board_.width);
     float by = sy(proc_.ballNY.load(std::memory_order_relaxed) * board_.topY);
-    float br = board_.ballRadius * scale();
+    float br = proc_.ballR.load(std::memory_order_relaxed) * scale();   // live ball size
     g.setColour(juce::Colours::white);
     g.fillEllipse(bx - br, by - br, br * 2.0f, br * 2.0f);
 
@@ -109,7 +109,7 @@ void BoardComponent::mouseDown(const juce::MouseEvent& e) {
     float bx = toBoardX(e.position.x), by = toBoardY(e.position.y);
 
     if (!proc_.running_.load() && !e.mods.isRightButtonDown()) {  // grab the start point
-        float dx = bx - board_.dropX, dy = by - board_.dropY, rr = board_.ballRadius * 2.0f;
+        float dx = bx - board_.dropX, dy = by - board_.dropY, rr = proc_.ballR.load() * 2.0f;
         if (dx * dx + dy * dy < rr * rr) { dragDrop_ = true; return; }
     }
 

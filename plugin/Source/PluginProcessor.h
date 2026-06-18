@@ -51,6 +51,7 @@ public:
     enum class EditType { Add, Move, Delete, SetType, SetDrop, Clear, Reset, BulkSet };
     struct Edit {
         EditType type; int idx = 0; float x = 0, y = 0, rest = 0.5f; int pegType = 0; float radius = 0.022f; int bus = 0;
+        float send = 1.0f, level = 1.0f, tone = 0.5f;
         std::shared_ptr<BoardParams> snapshot;  // BulkSet: full peg set to rebuild (bulk edits + undo)
     };
     void pushEdit(const Edit& e);

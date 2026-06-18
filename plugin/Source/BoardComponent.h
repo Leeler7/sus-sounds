@@ -31,9 +31,15 @@ public:
     // stores bounce + size per peg type, alongside its effect character (which lives in the engine).
     void  setBusBounce(int bus, int type, float v) { busBounce_[bus & (kNumBuses - 1)][type & 1] = v; }
     void  setBusSize  (int bus, int type, float v) { busSize_  [bus & (kNumBuses - 1)][type & 1] = v; }
+    void  setBusSend  (int bus, int type, float v) { busSend_  [bus & (kNumBuses - 1)][type & 1] = v; }
+    void  setBusLevel (int bus, int type, float v) { busLevel_ [bus & (kNumBuses - 1)][type & 1] = v; }
+    void  setBusTone  (int bus, int type, float v) { busTone_  [bus & (kNumBuses - 1)][type & 1] = v; }
     float busBounce(int bus, int type) const { return busBounce_[bus & (kNumBuses - 1)][type & 1]; }
     float busSize  (int bus, int type) const { return busSize_  [bus & (kNumBuses - 1)][type & 1]; }
-    void  resetBusPresets();   // all buses back to default bounce/size
+    float busSend  (int bus, int type) const { return busSend_  [bus & (kNumBuses - 1)][type & 1]; }
+    float busLevel (int bus, int type) const { return busLevel_ [bus & (kNumBuses - 1)][type & 1]; }
+    float busTone  (int bus, int type) const { return busTone_  [bus & (kNumBuses - 1)][type & 1]; }
+    void  resetBusPresets();   // all buses back to default peg profile
 
     void paint(juce::Graphics&) override;
     void mouseDown(const juce::MouseEvent&) override;
@@ -97,5 +103,8 @@ private:
     int brushType_ = 0;                       // 0 = delay, 1 = reverb (for new pegs)
     int brushBus_  = 0;                       // effect bus for newly placed pegs
     float busBounce_[kNumBuses][2];           // [bus][type] bounce preset for new pegs
-    float busSize_  [kNumBuses][2];           // [bus][type] size preset for new pegs
+    float busSize_  [kNumBuses][2];           // [bus][type] size preset
+    float busSend_  [kNumBuses][2];           // [bus][type] wet send
+    float busLevel_ [kNumBuses][2];           // [bus][type] gain trim
+    float busTone_  [kNumBuses][2];           // [bus][type] brightness bias
 };

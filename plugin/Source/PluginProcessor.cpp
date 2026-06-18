@@ -102,7 +102,7 @@ void PlinkoAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
             hasEdits_.store(false, std::memory_order_release);
             for (const auto& e : applyBuf_) {
                 switch (e.type) {
-                    case EditType::Add:     physics_.addPeg(e.x, e.y, e.rest, e.pegType, e.radius, e.bus); break;
+                    case EditType::Add:     physics_.addPeg(e.x, e.y, e.rest, e.pegType, e.radius, e.bus, e.send, e.level, e.tone); break;
                     case EditType::Move:    physics_.movePeg(e.idx, e.x, e.y); break;
                     case EditType::Delete:  physics_.removePeg(e.idx); break;
                     case EditType::SetType: physics_.setPegType(e.idx, e.pegType); break;
@@ -156,8 +156,13 @@ void PlinkoAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
             ScheduledHit sh;
             sh.offset = off;
             sh.hit = pegToTap(c, ep_);
-            sh.hit.bus = (c.peg >= 0 && c.peg < physics_.boardParams().pegCount)
-                       ? physics_.boardParams().pegBus[c.peg] : 0;
+            const auto& bp = physics_.boardParams();
+            if (c.peg >= 0 && c.peg < bp.pegCount) {        // apply this peg's per-peg trims
+                sh.hit.bus    = bp.pegBus[c.peg];
+                sh.hit.send   = bp.pegSend[c.peg];
+                sh.hit.level *= bp.pegLevel[c.peg];
+                sh.hit.brightness = juce::jlimit(0.03f, 1.0f, sh.hit.brightness * (0.5f + bp.pegTone[c.peg]));
+            }
             if (inputMode) {          // grab the last ~grainSeconds of the input at this hit
                 int gl = (int)(ep_.grainSeconds * sr_);
                 sh.hit.inputStart = ((w0 + off - gl) % inRingLen_ + inRingLen_) % inRingLen_;

@@ -36,6 +36,7 @@ struct Hit {
     int   type;        // 0 = delay, 1 = reverb
     int   inputStart;  // input mode: absolute input sample to start this grain from
     int   bus = 0;     // which effect bus this peg routes to (0..kNumBuses-1)
+    float send = 1.0f; // per-peg wet send to the bus (0 = dry tap only, 1 = full)
 };
 
 struct ScheduledHit { int offset; Hit hit; };  // offset = sample within the block
@@ -66,6 +67,7 @@ private:
         int    inPos = 0;           // absolute read index into input
         float  lp = 0.0f, lpCoef = 1.0f;  // one-pole lowpass (brightness)
         int    bus = 0;             // effect bus this voice feeds
+        float  send = 1.0f;         // wet send amount to the bus
     };
     static constexpr int NV = 64;
 

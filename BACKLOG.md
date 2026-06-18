@@ -186,7 +186,12 @@ PhysicsCore (bulk rebuild on Reset/BulkSet). Per-peg size already exists.
   the active bus; brush places new pegs on the active bus; right-click "Assign to bus"; colored ring
   shows bus (>0). Chosen over per-voice (cost: per-voice scales with polyphony x effect complexity +
   echo-tail voice-budget blowup; buses are fixed-cost and scale with future hall/shimmer/tape).
-- PHASE 2 (deferred): per-peg send + level + tone; per-bus delay TIME / effect TYPE selectors.
+- PHASE 2 DONE 2026-06-18: per-peg send + level + tone (BoardParams pegSend/pegLevel/pegTone;
+  stored in the bus preset per-bus-per-type; brush captures them; assign-to-bus / apply-brush stamp
+  them). Send scales the wet feed to the bus in the engine (Hit/Voice.send); level multiplies the
+  hit level; tone biases brightness (×(0.5+tone)), all applied in the processor. 7 sliders per
+  Delay/Reverb panel now (layPanel takes a row list). STILL DEFERRED: per-bus delay TIME / effect
+  TYPE selectors (-> folds into the delay/reverb TYPES task next).
 - NOTE: bus effect params aren't persisted (non-APVTS); Standalone opens at defaults anyway, but a
   VST3 in a DAW won't recall them yet -> move to APVTS (or save in state) when persistence matters.
 

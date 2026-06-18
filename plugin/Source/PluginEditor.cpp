@@ -1,6 +1,8 @@
 #include "PluginEditor.h"
 #include "Wav.h"
 #include <cmath>
+#include <utility>
+#include <initializer_list>
 
 static const juce::Colour kDelay  (0xffe0a458);
 static const juce::Colour kReverb (0xff5bc0be);
@@ -37,11 +39,17 @@ void PlinkoAudioProcessorEditor::reloadBusSliders() {
     delayMix_.setValue(proc_.busDelayMix_[activeBus_].load(),       juce::dontSendNotification);
     reverbDecay_.setValue(proc_.busReverbDecay_[activeBus_].load(), juce::dontSendNotification);
     reverbMix_.setValue(proc_.busReverbMix_[activeBus_].load(),     juce::dontSendNotification);
-    // brush bounce/size (read from the board's per-bus presets, the single source of truth)
+    // brush peg profile (read from the board's per-bus presets, the single source of truth)
     delayBounce_.setValue(board_.busBounce(activeBus_, 0),  juce::dontSendNotification);
     delaySize_.setValue(board_.busSize(activeBus_, 0),      juce::dontSendNotification);
+    delaySend_.setValue(board_.busSend(activeBus_, 0),      juce::dontSendNotification);
+    delayLevel_.setValue(board_.busLevel(activeBus_, 0),    juce::dontSendNotification);
+    delayTone_.setValue(board_.busTone(activeBus_, 0),      juce::dontSendNotification);
     reverbBounce_.setValue(board_.busBounce(activeBus_, 1), juce::dontSendNotification);
     reverbSize_.setValue(board_.busSize(activeBus_, 1),     juce::dontSendNotification);
+    reverbSend_.setValue(board_.busSend(activeBus_, 1),     juce::dontSendNotification);
+    reverbLevel_.setValue(board_.busLevel(activeBus_, 1),   juce::dontSendNotification);
+    reverbTone_.setValue(board_.busTone(activeBus_, 1),     juce::dontSendNotification);
 }
 
 void PlinkoAudioProcessorEditor::selectBrush(int type) {
@@ -134,6 +142,9 @@ PlinkoAudioProcessorEditor::PlinkoAudioProcessorEditor(PlinkoAudioProcessor& p)
     addBrush(delayBounce_, delayBounceL_, "Bounce", 0.0, 2.0, 1.0,  [this](double v) { board_.setBusBounce(activeBus_, 0, (float)v); });
     addBrush(delaySize_,   delaySizeL_,   "Size",   0.005, 0.06, 0.0225, [this](double v) { board_.setBusSize(activeBus_, 0, (float)v); });
     delaySize_.setSkewFactorFromMidPoint(0.0225);   // default peg size at noon (matches the board)
+    addBrush(delaySend_,  delaySendL_,  "Send",  0.0, 1.0, 1.0, [this](double v) { board_.setBusSend(activeBus_, 0, (float)v); });
+    addBrush(delayLevel_, delayLevelL_, "Level", 0.0, 2.0, 1.0, [this](double v) { board_.setBusLevel(activeBus_, 0, (float)v); });
+    addBrush(delayTone_,  delayToneL_,  "Tone",  0.0, 1.0, 0.5, [this](double v) { board_.setBusTone(activeBus_, 0, (float)v); });
 
     // Per-bus effect sliders (edit the ACTIVE bus; non-APVTS, written straight to the processor).
     auto setupBus = [this](juce::Slider& s, juce::Label& l, const juce::String& name, double lo, double hi, double mid) {
@@ -159,6 +170,9 @@ PlinkoAudioProcessorEditor::PlinkoAudioProcessorEditor(PlinkoAudioProcessor& p)
     addBrush(reverbBounce_, reverbBounceL_, "Bounce", 0.0, 2.0, 1.0,  [this](double v) { board_.setBusBounce(activeBus_, 1, (float)v); });
     addBrush(reverbSize_,   reverbSizeL_,   "Size",   0.005, 0.06, 0.0225, [this](double v) { board_.setBusSize(activeBus_, 1, (float)v); });
     reverbSize_.setSkewFactorFromMidPoint(0.0225);   // default peg size at noon (matches the board)
+    addBrush(reverbSend_,  reverbSendL_,  "Send",  0.0, 1.0, 1.0, [this](double v) { board_.setBusSend(activeBus_, 1, (float)v); });
+    addBrush(reverbLevel_, reverbLevelL_, "Level", 0.0, 2.0, 1.0, [this](double v) { board_.setBusLevel(activeBus_, 1, (float)v); });
+    addBrush(reverbTone_,  reverbToneL_,  "Tone",  0.0, 1.0, 0.5, [this](double v) { board_.setBusTone(activeBus_, 1, (float)v); });
     setupBus(reverbDecay_, reverbDecayL_, "Rev Size", 0.5, 0.95, 0.85);
     reverbDecay_.onValueChange = [this] { proc_.busReverbDecay_[activeBus_].store((float)reverbDecay_.getValue()); };
     setupBus(reverbMix_, reverbMixL_, "Mix", 0.0, 1.0, 0.0);
@@ -234,17 +248,20 @@ void PlinkoAudioProcessorEditor::resized() {
     board_.setBounds(r.reduced(4));
 
     auto layPanel = [](juce::Rectangle<int> p, juce::TextButton& btn,
-                       juce::Label& l1, juce::Component& c1, juce::Label& l2, juce::Component& c2,
-                       juce::Label& l3, juce::Component& c3, juce::Label& l4, juce::Component& c4) {
+                       std::initializer_list<std::pair<juce::Label*, juce::Component*>> rows) {
         p.reduce(4, 2);
         btn.setBounds(p.removeFromTop(24));
         p.removeFromTop(4);
-        int h = p.getHeight() / 4;
-        layStacked(p.removeFromTop(h), l1, c1);
-        layStacked(p.removeFromTop(h), l2, c2);
-        layStacked(p.removeFromTop(h), l3, c3);
-        layStacked(p.removeFromTop(h), l4, c4);
+        int n = (int)rows.size();
+        int h = n > 0 ? p.getHeight() / n : p.getHeight();
+        for (auto& r : rows) layStacked(p.removeFromTop(h), *r.first, *r.second);
     };
-    layPanel(left,  delayBrushBtn_,  delayBounceL_,  delayBounce_,  delaySizeL_,  delaySize_,  feedbackL_,    feedback_,    delayMixL_, delayMix_);
-    layPanel(right, reverbBrushBtn_, reverbBounceL_, reverbBounce_, reverbSizeL_, reverbSize_, reverbDecayL_, reverbDecay_, reverbMixL_, reverbMix_);
+    layPanel(left, delayBrushBtn_, {
+        { &delayBounceL_, &delayBounce_ }, { &delaySizeL_, &delaySize_ },
+        { &delaySendL_, &delaySend_ }, { &delayLevelL_, &delayLevel_ }, { &delayToneL_, &delayTone_ },
+        { &feedbackL_, &feedback_ }, { &delayMixL_, &delayMix_ } });
+    layPanel(right, reverbBrushBtn_, {
+        { &reverbBounceL_, &reverbBounce_ }, { &reverbSizeL_, &reverbSize_ },
+        { &reverbSendL_, &reverbSend_ }, { &reverbLevelL_, &reverbLevel_ }, { &reverbToneL_, &reverbTone_ },
+        { &reverbDecayL_, &reverbDecay_ }, { &reverbMixL_, &reverbMix_ } });
 }

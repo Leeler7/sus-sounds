@@ -78,6 +78,7 @@ void SoundEngine::startVoice(const Hit& h) {
     v.panR = h.panR;
     v.type = h.type;
     v.bus  = (h.bus < 0 || h.bus >= kNumBuses) ? 0 : h.bus;
+    v.send = h.send;
     v.env = 1.0f;
     // decay to ~0.1% by grainSeconds, so grainSeconds is the real grain LENGTH
     v.envMul = std::exp(-6.9f / (ep_.grainSeconds * (float)sr_));
@@ -147,12 +148,12 @@ void SoundEngine::process(float* outL, float* outR, int n, const ScheduledHit* h
             // by the host/harness); exciter tones include their own dry.
             bool addDry = !v.fromInput;
             const int b = v.bus;
-            if (v.type == 0) {                 // delay peg: (dry) + into its bus's delay line
+            if (v.type == 0) {                 // delay peg: (dry) + wet send into its bus's delay line
                 if (addDry) { dryL += l; dryR += r; }
-                delInL[b] += l; delInR[b] += r;
-            } else {                           // reverb peg: into its bus's reverb (splash)
+                delInL[b] += l * v.send; delInR[b] += r * v.send;
+            } else {                           // reverb peg: wet send into its bus's reverb (splash)
                 if (addDry) { dryL += l * 0.3f; dryR += r * 0.3f; }
-                revIn[b] += (l + r) * 0.5f;
+                revIn[b] += (l + r) * 0.5f * v.send;
             }
         }
 

@@ -26,6 +26,7 @@ void makeStaggeredBoard(BoardParams& p, int rows, int cols) {
                 p.pegRad[n] = p.pegRadius;
                 p.pegType[n] = (r % 2 == 0) ? 0 : 1;  // alternate rows: delay / reverb / delay ...
                 p.pegBus[n] = 0;                      // default: all pegs on bus 0
+                p.pegSend[n] = 1.0f; p.pegLevel[n] = 1.0f; p.pegTone[n] = 0.5f;  // neutral trims
                 ++n;
             }
         }
@@ -162,10 +163,12 @@ void PhysicsWorld::setBallSize(float r) {
     ballShape_ = b2CreateCircleShape(ball_, &sd, &c);
 }
 
-bool PhysicsWorld::addPeg(float x, float y, float rest, int type, float radius, int bus) {
+bool PhysicsWorld::addPeg(float x, float y, float rest, int type, float radius, int bus,
+                          float send, float level, float tone) {
     if (!inited_ || p_.pegCount >= 128) return false;
     int i = p_.pegCount;
     p_.pegX[i] = x; p_.pegY[i] = y; p_.pegRest[i] = rest; p_.pegType[i] = type; p_.pegRad[i] = radius; p_.pegBus[i] = bus;
+    p_.pegSend[i] = send; p_.pegLevel[i] = level; p_.pegTone[i] = tone;
     createPegBody(i);
     p_.pegCount = i + 1;
     return true;
@@ -185,6 +188,7 @@ void PhysicsWorld::removePeg(int i) {
         p_.pegX[i] = p_.pegX[last]; p_.pegY[i] = p_.pegY[last];
         p_.pegRest[i] = p_.pegRest[last]; p_.pegRad[i] = p_.pegRad[last]; p_.pegType[i] = p_.pegType[last];
         p_.pegBus[i] = p_.pegBus[last];
+        p_.pegSend[i] = p_.pegSend[last]; p_.pegLevel[i] = p_.pegLevel[last]; p_.pegTone[i] = p_.pegTone[last];
         pegBody_[i] = pegBody_[last]; pegShape_[i] = pegShape_[last];
         b2Shape_SetUserData(pegShape_[i], (void*)(intptr_t)(i + 1));   // userData tracks the new slot
     }
@@ -213,6 +217,7 @@ void PhysicsWorld::setPegs(const BoardParams& src) {
             p_.pegX[i] = src.pegX[i];   p_.pegY[i] = src.pegY[i];
             p_.pegRest[i] = src.pegRest[i]; p_.pegRad[i] = src.pegRad[i];
             p_.pegType[i] = src.pegType[i]; p_.pegBus[i] = src.pegBus[i];
+            p_.pegSend[i] = src.pegSend[i]; p_.pegLevel[i] = src.pegLevel[i]; p_.pegTone[i] = src.pegTone[i];
         }
     };
     if (!inited_) { copyPegs(); return; }

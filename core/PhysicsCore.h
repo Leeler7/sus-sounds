@@ -63,6 +63,9 @@ struct BoardParams {
     float pegRad[128];        // per-peg radius (size)
     int   pegType[128];       // per-peg routing: 0 = delay peg (rhythmic echo), 1 = reverb peg (splash)
     int   pegBus[128];        // per-peg effect bus (0..kNumBuses-1): which delay/reverb character
+    float pegSend[128];       // per-peg wet send to its bus (0 = dry tap only, 1 = full)
+    float pegLevel[128];      // per-peg gain trim (1 = unity)
+    float pegTone[128];       // per-peg brightness bias (0.5 = neutral)
 };
 
 struct Collision {
@@ -97,7 +100,8 @@ public:
 
     // live control (GUI) -- these modify the running world WITHOUT re-init (ball preserved)
     void setGravity(float g);
-    bool addPeg(float x, float y, float rest, int type, float radius, int bus);  // false if full
+    bool addPeg(float x, float y, float rest, int type, float radius, int bus,
+                float send, float level, float tone);  // false if full
     void movePeg(int i, float x, float y);
     void removePeg(int i);
     void setPegType(int i, int type);

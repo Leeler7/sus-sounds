@@ -64,17 +64,19 @@ void PlinkoAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
     const int  source    = (int)apvts.getRawParameterValue(pid::source)->load();  // 0 Synth, 1 Input, 2 WAV
     const bool inputMode = (source >= 1);
     const bool wavMode   = (source == 2);
+    const bool running   = running_.load(std::memory_order_relaxed);
     const int  w0 = inWrite_;
     const bool capDry = inputMode && n <= (int)dryCopyL_.size();
+    if (wavMode && !running) wavPos_ = 0;  // WAV loop is synced to the ball: rewind while stopped
     {
         const int nch = buffer.getNumChannels();
         const float* inL = buffer.getReadPointer(0);
         const float* inR = nch > 1 ? buffer.getReadPointer(1) : inL;
         for (int i = 0; i < n; ++i) {
             float m, dl, dr;
-            if (wavMode) {                 // looping WAV is both the dry signal and the grain source
+            if (wavMode) {                 // looping WAV plays ONLY while the ball runs (synced to Start/Stop)
                 float s = 0.0f;
-                if (!wav_.empty()) { s = wav_[wavPos_]; if (++wavPos_ >= (int)wav_.size()) wavPos_ = 0; }
+                if (running && !wav_.empty()) { s = wav_[wavPos_]; if (++wavPos_ >= (int)wav_.size()) wavPos_ = 0; }
                 m = dl = dr = s;
             } else {                       // live input (dry unused in Synth mode)
                 dl = inL[i]; dr = inR[i]; m = 0.5f * (dl + dr);
@@ -134,7 +136,7 @@ void PlinkoAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
     engine_.setParams(ep_);
 
     hits_.clear();
-    if (running_.load(std::memory_order_relaxed)) {
+    if (running) {
         // advance physics by exactly this block's duration
         const double t0 = physics_.simTime();
         ev_.clear();

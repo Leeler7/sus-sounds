@@ -34,6 +34,27 @@ static RunResult run(uint64_t seed, double chunk, int nCalls) {
     return r;
 }
 
+// Feed EXACTLY totalSeconds of sim time, delivered in audio blocks of `blockSamples`
+// at `sampleRate` (final partial chunk fills the remainder so the total is exact).
+// Sample-rate invariance: the physics must depend only on elapsed time, so 44.1/48/96k
+// must yield identical events for the same total time.
+static RunResult runSR(uint64_t seed, double sampleRate, int blockSamples, double totalSeconds) {
+    BoardParams p;
+    makeStaggeredBoard(p);
+    PhysicsWorld w;
+    w.init(seed, p);
+    RunResult r;
+    r.pegs = w.dbgPegCount();
+    double blockSec = blockSamples / sampleRate;
+    double fed = 0.0;
+    while (fed + blockSec <= totalSeconds) { w.advance(blockSec, r.ev); fed += blockSec; }
+    if (totalSeconds - fed > 0.0) w.advance(totalSeconds - fed, r.ev); // exact remainder
+    r.loops = w.loopIndex();
+    r.ballY = w.dbgBallY();
+    w.shutdown();
+    return r;
+}
+
 static bool bitSame(const std::vector<Collision>& a, const std::vector<Collision>& b) {
     if (a.size() != b.size()) return false;
     for (size_t i = 0; i < a.size(); ++i) {
@@ -60,19 +81,26 @@ int main() {
         if (a != c) rngSens = true;
     }
 
+    // Sample-rate invariance: same 10 s of time delivered at 44.1/48/96k -> identical.
+    auto sr441 = runSR(12345, 44100.0, 128, 10.0);
+    auto sr480 = runSR(12345, 48000.0, 128, 10.0);
+    auto sr960 = runSR(12345, 96000.0, 256, 10.0);
+
     bool det  = bitSame(A.ev, B.ev);
     bool blk  = bitSame(A.ev, C.ev);
+    bool srInv = bitSame(sr441.ev, sr480.ev) && bitSame(sr441.ev, sr960.ev);
     bool live = (A.ev.size() >= 10) && (A.loops >= 1);
 
     std::printf("[board] pegs=%d  events(10s)=%zu  loops=%d  finalBallY=%.3f\n",
                 A.pegs, A.ev.size(), A.loops, A.ballY);
     std::printf("determinism (same seed, same calls):     %s\n", det     ? "PASS" : "FAIL");
     std::printf("block-size invariance (1x vs 50x dt):    %s\n", blk     ? "PASS" : "FAIL");
+    std::printf("sample-rate invariance (44.1/48/96k):    %s\n", srInv   ? "PASS" : "FAIL");
     std::printf("rng determinism (same seed = same):      %s\n", rngDet  ? "PASS" : "FAIL");
     std::printf("rng sensitivity (diff seed = diff):      %s\n", rngSens ? "PASS" : "FAIL");
     std::printf("liveliness (cascades + loops, not inert):%s\n", live    ? "PASS" : "FAIL");
 
-    bool ok = det && blk && rngDet && rngSens && live;
+    bool ok = det && blk && srInv && rngDet && rngSens && live;
     std::printf("RESULT: %s\n", ok ? "ALL PASS" : "FAILED");
     return ok ? 0 : 1;
 }

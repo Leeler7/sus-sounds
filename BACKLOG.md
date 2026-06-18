@@ -24,9 +24,20 @@ context to pick up cold.
 - **Why deferred:** Linux DAW usage (Reaper/Bitwig on Linux) is a rounding error in the
   VST/AU market; not a v1 ship target. Descoped from the determinism matrix 2026-06-17 to
   keep CI lean (kept Windows + macOS Intel + macOS arm64).
+- **Note (2026-06-17):** the Linux render job FAILED to build in the first CI run (cause not
+  yet diagnosed — likely a gcc/clang strictness nit in the spike harness, e.g. an unused
+  result or a stricter warning-as-error). Diagnose if/when Linux is rescoped.
 - **When worth it:** if Linux demand appears, or for a Bitwig/Reaper-Linux audience. Adding
   it back is a one-line matrix change.
 - **Priority:** P3.
+
+### CI follow-up: confirm macOS Intel determinism leg
+- **What:** The macOS Intel (`macos-13`) determinism leg was still queued when T0a was
+  called done 2026-06-17. Windows x64 and macOS arm64 already matched bit-for-bit, so Intel
+  (same x64 arch as Windows) is low-risk, but the formal compare-job green wasn't stamped.
+- **Action:** glance at the next CI run's `compare` job to confirm `macos-13` matches the
+  `88bfd0f0...` hash. Auto-runs on every push; no work unless it diverges.
+- **Priority:** P3 (confirmation only).
 
 ### Distribution pipeline
 - **What:** Build/sign/notarize VST3 + AU, installer, release CI for Win/Mac.
@@ -62,6 +73,21 @@ context to pick up cold.
 - Decided against. The Python sketch (if built) proves *musical fun* only. The real
   architecture (deterministic audio-time physics, lock-free event queue, sample-accurate
   collisions) lives in the JUCE build and Python can't model it.
+
+## Tuning follow-ups
+
+### Cascade richness (T1 physics feel) — tune by ear when audio is wired
+- **What:** The deterministic physics core (`core/`) cascades and loops correctly, but the
+  ball can land near-centered on a peg and balance there until the no-stuck nudge frees it,
+  making some drops slower/sparser than ideal (~17 hits/loop, ~1 loop/10s in the headless test).
+- **Why deferred:** Cascade richness is a feel decision best tuned by ear with the audio
+  mapping in the loop (exactly how the Python sound spike was tuned), not by twiddling
+  gravity/restitution/peg-spacing against a headless pass/fail. The determinism is already
+  proven and is independent of this tuning.
+- **Where:** `core/PhysicsCore.h` BoardParams (gravity, restitution, peg spacing, dropX,
+  initialVx, nudge). Consider: jitter peg positions slightly, vary drop point, or a small
+  per-loop seeded vx for variety across loops.
+- **Priority:** P2 (do alongside the audio engine, T7-ish).
 
 ## Open product questions to revisit
 

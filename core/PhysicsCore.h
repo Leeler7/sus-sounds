@@ -28,16 +28,22 @@
 struct BoardParams {
     float width   = 1.0f;     // board spans x in [0, width]
     float topY    = 1.4f;     // y in [0, topY]; drop near top, exit near bottom
-    float gravity = 10.0f;    // magnitude; applied as (0, -gravity)
+    float gravity = 22.0f;    // magnitude; applied as (0, -gravity). Higher = decisive descent.
     float ballRadius = 0.035f; // gaps must exceed the ball diameter for a clean cascade
     float pegRadius  = 0.04f;
-    float restitution = 0.55f;// <1 so the ball sheds energy and descends (not endless bounce)
-    float dropX = 0.5f;       // drop onto the apex peg -> deflects left/right (classic Plinko)
+    float restitution = 0.5f; // middle ground. NOTE: cascade richness still needs by-ear
+                              // tuning once audio is wired (the deterministic core is correct;
+                              // a near-centered landing can still balance on a peg until the
+                              // no-stuck nudge frees it -- see ENG-LAYOUT T1 follow-up).
+    float dropX = 0.42f;      // OFF the peg columns/gaps: a perfectly symmetric drop would
+                              // balance on the apex peg forever (no asymmetry to deflect it)
     float dropY = 1.33f;
+    float initialVx = 0.6f;   // small fixed sideways velocity at spawn -> breaks symmetry,
+                              // guarantees a cascade (deterministic: same loop every time)
     float exitY = 0.04f;      // ball below this = exited -> respawn
     float energyFloor = 0.05f;// below this speed = "slow"
-    float nudge = 0.4f;       // desired horizontal velocity kick when genuinely stuck (m/s)
-    int   stuckSteps = 250;   // must be slow this many sim steps (~0.25s) before nudging
+    float nudge = 0.8f;       // desired horizontal velocity kick when genuinely stuck (m/s)
+    int   stuckSteps = 80;    // must be slow this many sim steps (~0.08s) before nudging
     double maxLoopSeconds = 8.0; // hard timeout backstop -> teleport+respawn
 
     int   pegCount = 0;
@@ -53,7 +59,7 @@ struct Collision {
 };
 
 // Fill p with a deterministic staggered Plinko grid (no RNG -> layout is data, not chance).
-void makeStaggeredBoard(BoardParams& p, int rows = 11, int cols = 5);
+void makeStaggeredBoard(BoardParams& p, int rows = 13, int cols = 5);
 
 class PhysicsWorld {
 public:

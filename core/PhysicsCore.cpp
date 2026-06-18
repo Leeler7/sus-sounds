@@ -78,6 +78,7 @@ void PhysicsWorld::init(uint64_t seed, const BoardParams& params) {
         sd.enableContactEvents = true;   // needed for the ball-peg contact to report
         b2CreateCircleShape(ball_, &sd, &c);
     }
+    b2Body_SetLinearVelocity(ball_, b2Vec2{ p_.initialVx, 0.0f }); // break symmetry at drop
 
     inited_ = true;
 }
@@ -99,7 +100,7 @@ void PhysicsWorld::respawn() {
     // reseed deterministically from (baseSeed, loopIndex) so each loop is reproducible
     rng_.seed(baseSeed_, (uint64_t)loop_ + 1u);
     b2Body_SetTransform(ball_, b2Vec2{ p_.dropX, p_.dropY }, b2MakeRot(0.0f));
-    b2Body_SetLinearVelocity(ball_, b2Vec2{ 0.0f, 0.0f });
+    b2Body_SetLinearVelocity(ball_, b2Vec2{ p_.initialVx, 0.0f }); // break symmetry at respawn
     b2Body_SetAngularVelocity(ball_, 0.0f);
     slowCount_ = 0;
     loopStart_ = simTime_;

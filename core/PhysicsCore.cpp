@@ -91,6 +91,7 @@ void PhysicsWorld::createPegBody(int i) {
 void PhysicsWorld::createBall() {
     b2BodyDef bd = b2DefaultBodyDef();
     bd.type = b2_dynamicBody;
+    bd.isBullet = true;                  // continuous collision: don't tunnel through pegs/walls
     bd.position = b2Vec2{ p_.dropX, p_.dropY };
     ball_ = b2CreateBody(world_, &bd);
     b2Circle c = { b2Vec2{ 0.0f, 0.0f }, p_.ballRadius };
@@ -202,6 +203,18 @@ void PhysicsWorld::stepOnce(std::vector<Collision>& out) {
         float dir = rng_.nextSigned();
         b2Body_ApplyLinearImpulseToCenter(ball_, b2Vec2{ mass * p_.nudge * dir, 0.0f }, true);
         slowCount_ = 0;
+    }
+
+    // Containment: keep the ball inside the frame (left/right/top). Catches any tunneling
+    // through the thin walls and reflects it back toward the pegs (a guaranteed wall bounce).
+    {
+        b2Vec2 cp = b2Body_GetPosition(ball_);
+        b2Vec2 cv = b2Body_GetLinearVelocity(ball_);
+        bool fix = false;
+        if (cp.x < p_.ballRadius)            { cp.x = p_.ballRadius;            if (cv.x < 0) cv.x = -cv.x * 0.5f; fix = true; }
+        if (cp.x > p_.width - p_.ballRadius) { cp.x = p_.width - p_.ballRadius; if (cv.x > 0) cv.x = -cv.x * 0.5f; fix = true; }
+        if (cp.y > p_.topY - p_.ballRadius)  { cp.y = p_.topY - p_.ballRadius;  if (cv.y > 0) cv.y = -cv.y * 0.5f; fix = true; }
+        if (fix) { b2Body_SetTransform(ball_, cp, b2MakeRot(0.0f)); b2Body_SetLinearVelocity(ball_, cv); }
     }
 
     simTime_ += SIM_DT;

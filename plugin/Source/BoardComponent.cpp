@@ -75,6 +75,7 @@ void BoardComponent::removePeg(int i) {
     board_.pegX[i] = board_.pegX[last];
     board_.pegY[i] = board_.pegY[last];
     board_.pegRest[i] = board_.pegRest[last];
+    board_.pegRad[i] = board_.pegRad[last];     // was missing -> desynced size from physics on delete
     board_.pegType[i] = board_.pegType[last];
     board_.pegCount = last;
 }

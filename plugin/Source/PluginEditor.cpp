@@ -48,7 +48,16 @@ PlinkoAudioProcessorEditor::PlinkoAudioProcessorEditor(PlinkoAudioProcessor& p)
         board_.repaint();
     };
     addAndMakeVisible(clearBtn_);  clearBtn_.setButtonText("Clear");   clearBtn_.onClick  = [this] { board_.clearAllPegs(); };
-    addAndMakeVisible(revertBtn_); revertBtn_.setButtonText("Revert"); revertBtn_.onClick = [this] { board_.revertToDefault(); };
+    addAndMakeVisible(revertBtn_);
+    revertBtn_.setButtonText("Revert");
+    revertBtn_.onClick = [this] {
+        for (auto* prm : proc_.getParameters())          // all knobs back to default
+            prm->setValueNotifyingHost(prm->getDefaultValue());
+        delayBounce_.setValue(1.0);  delaySize_.setValue(0.011);   // brushes back to default
+        reverbBounce_.setValue(1.0); reverbSize_.setValue(0.011);
+        selectBrush(0);
+        board_.revertToDefault();                        // board back to baseline
+    };
 
     // Shape
     addKnob(gravity_,    pid::gravity,    "Gravity");
@@ -59,7 +68,7 @@ PlinkoAudioProcessorEditor::PlinkoAudioProcessorEditor(PlinkoAudioProcessor& p)
     addAndMakeVisible(delayBrushBtn_);
     delayBrushBtn_.setButtonText("Delay Brush");
     delayBrushBtn_.onClick = [this] { selectBrush(0); };
-    addBrush(delayBounce_, delayBounceL_, "Bounce", 0.0, 1.3, 0.5,  [this](double v) { board_.setBrushBounce(0, (float)v); });
+    addBrush(delayBounce_, delayBounceL_, "Bounce", 0.0, 2.0, 1.0,  [this](double v) { board_.setBrushBounce(0, (float)v); });
     addBrush(delaySize_,   delaySizeL_,   "Size",   0.005, 0.03, 0.011, [this](double v) { board_.setBrushSize(0, (float)v); });
     addKnob(feedback_,  pid::feedback,  "Feedback");
     addKnob(delayMix_,  pid::delayMix,  "Mix");
@@ -68,7 +77,7 @@ PlinkoAudioProcessorEditor::PlinkoAudioProcessorEditor(PlinkoAudioProcessor& p)
     addAndMakeVisible(reverbBrushBtn_);
     reverbBrushBtn_.setButtonText("Reverb Brush");
     reverbBrushBtn_.onClick = [this] { selectBrush(1); };
-    addBrush(reverbBounce_, reverbBounceL_, "Bounce", 0.0, 1.3, 0.5,  [this](double v) { board_.setBrushBounce(1, (float)v); });
+    addBrush(reverbBounce_, reverbBounceL_, "Bounce", 0.0, 2.0, 1.0,  [this](double v) { board_.setBrushBounce(1, (float)v); });
     addBrush(reverbSize_,   reverbSizeL_,   "Size",   0.005, 0.03, 0.011, [this](double v) { board_.setBrushSize(1, (float)v); });
     addKnob(reverbDecay_, pid::reverbDecay, "Rev Size");
     addKnob(reverbMix_,   pid::reverbMix,   "Mix");
@@ -80,8 +89,8 @@ PlinkoAudioProcessorEditor::PlinkoAudioProcessorEditor(PlinkoAudioProcessor& p)
     addKnob(level_,  pid::level,    "Level");
 
     // push initial brush values to the board, default to the delay brush
-    board_.setBrushBounce(0, 0.5f); board_.setBrushSize(0, 0.011f);
-    board_.setBrushBounce(1, 0.5f); board_.setBrushSize(1, 0.011f);
+    board_.setBrushBounce(0, 1.0f); board_.setBrushSize(0, 0.011f);
+    board_.setBrushBounce(1, 1.0f); board_.setBrushSize(1, 0.011f);
     selectBrush(0);
 
     setResizable(true, true);

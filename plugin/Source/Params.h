@@ -33,9 +33,9 @@ inline juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout
     add(pid::delayMix,    "Delay Mix",    NormalisableRange<float>(0.0f, 1.0f),        0.5f);
     add(pid::reverbMix,   "Reverb Mix",   NormalisableRange<float>(0.0f, 1.0f),        0.45f);
     add(pid::reverbDecay, "Reverb Size",  NormalisableRange<float>(0.5f, 0.95f),       0.85f);
-    add(pid::tone,        "Tone",         NormalisableRange<float>(0.0f, 1.0f),        0.6f);
+    add(pid::tone,        "Tone",         NormalisableRange<float>(0.0f, 1.0f),        0.5f);  // neutral
     add(pid::panWidth,    "Width",        NormalisableRange<float>(0.0f, 1.0f),        1.0f);
-    add(pid::dryWet,      "Dry/Wet",      NormalisableRange<float>(0.0f, 1.0f),        0.5f);
-    add(pid::level,       "Level",        NormalisableRange<float>(0.0f, 1.5f),        1.0f);
+    add(pid::dryWet,      "Dry/Wet",      NormalisableRange<float>(0.0f, 1.0f),        0.5f);  // half wet
+    add(pid::level,       "Level",        NormalisableRange<float>(0.0f, 2.0f),        1.0f);  // unity at noon
     return { p.begin(), p.end() };
 }

@@ -58,6 +58,6 @@ private:
     int dragIdx_ = -1;
     bool dragDrop_ = false; // dragging the start point (only while stopped)
     int brushType_ = 0;                       // 0 = delay, 1 = reverb (for new pegs)
-    float brushBounce_[2] = { 0.5f, 0.5f };   // [delay, reverb] new-peg bounce
+    float brushBounce_[2] = { 1.0f, 1.0f };   // [delay, reverb] new-peg bounce (1 = neutral)
     float brushSize_[2]   = { 0.011f, 0.011f };// [delay, reverb] new-peg size
 };

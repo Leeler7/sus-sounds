@@ -64,6 +64,9 @@ private:
     std::vector<Collision> ev_;
     std::vector<ScheduledHit> hits_;
 
+    std::vector<float> inRing_;   int inWrite_ = 0, inRingLen_ = 1;  // mono history of recent input (grain source)
+    std::vector<float> dryCopyL_, dryCopyR_;                          // dry block stashed for input-mode passthrough
+
     juce::CriticalSection editLock_;
     std::vector<Edit> pendingEdits_, applyBuf_;
     std::atomic<bool> hasEdits_{ false };

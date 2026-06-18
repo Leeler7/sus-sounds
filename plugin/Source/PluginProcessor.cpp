@@ -12,10 +12,15 @@ PlinkoAudioProcessor::PlinkoAudioProcessor()
     applyBuf_.reserve(256);
 }
 
-void PlinkoAudioProcessor::prepareToPlay(double sampleRate, int) {
+void PlinkoAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock) {
     sr_ = sampleRate;
     physics_.init(kSeed, board_);
     engine_.prepare(sampleRate, ep_);
+    inRingLen_ = juce::jmax(1, (int)(sampleRate * 2.0));   // 2s of input history for grains
+    inRing_.assign(inRingLen_, 0.0f);
+    inWrite_ = 0;
+    dryCopyL_.assign(juce::jmax(1, samplesPerBlock), 0.0f);
+    dryCopyR_.assign(juce::jmax(1, samplesPerBlock), 0.0f);
 }
 
 BoardParams PlinkoAudioProcessor::defaultBoard() {
@@ -43,6 +48,22 @@ bool PlinkoAudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) co
 void PlinkoAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer&) {
     juce::ScopedNoDenormals noDenormals;
     const int n = buffer.getNumSamples();
+
+    // Capture the incoming audio: a mono copy into the input ring (grain source) and, in input
+    // mode, the dry stereo block for passthrough. w0 = ring write index at the start of the block.
+    const bool useInput = apvts.getRawParameterValue(pid::source)->load() > 0.5f;
+    const int  w0 = inWrite_;
+    const bool capDry = useInput && n <= (int)dryCopyL_.size();
+    {
+        const int nch = buffer.getNumChannels();
+        const float* inL = buffer.getReadPointer(0);
+        const float* inR = nch > 1 ? buffer.getReadPointer(1) : inL;
+        for (int i = 0; i < n; ++i) {
+            inRing_[inWrite_] = 0.5f * (inL[i] + inR[i]);
+            if (++inWrite_ >= inRingLen_) inWrite_ = 0;
+            if (capDry) { dryCopyL_[i] = inL[i]; dryCopyR_[i] = inR[i]; }
+        }
+    }
 
     // Apply queued live peg edits to the running world (no re-init -> ball keeps flowing).
     // Try-lock so we never block the GUI; if we miss it, edits apply next block.
@@ -84,6 +105,12 @@ void PlinkoAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
     physics_.setBallSize(apvts.getRawParameterValue(pid::ballSize)->load());
     physics_.setWidth(apvts.getRawParameterValue(pid::boardWidth)->load());
     board_.width = physics_.boardParams().width;   // keep the mirror current (re-prepare + GUI)
+
+    // Input mode: feed the ring to the engine and let it output full wet (grain-fed delay/reverb);
+    // the dry live signal is crossfaded back in below. Synth mode: no input, engine handles dry/wet.
+    const float userDryWet = ep_.dryWet;
+    if (useInput) { ep_.dryWet = 1.0f; engine_.setInput(inRing_.data(), inRingLen_); }
+    else            engine_.setInput(nullptr, 0);
     engine_.setParams(ep_);
 
     hits_.clear();
@@ -99,7 +126,12 @@ void PlinkoAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
             ScheduledHit sh;
             sh.offset = off;
             sh.hit = pegToTap(c, ep_);
-            sh.hit.inputStart = 0;   // exciter mode (input path is a later GUI pass)
+            if (useInput) {           // grab the last ~grainSeconds of live input at this hit
+                int gl = (int)(ep_.grainSeconds * sr_);
+                sh.hit.inputStart = ((w0 + off - gl) % inRingLen_ + inRingLen_) % inRingLen_;
+            } else {
+                sh.hit.inputStart = 0;
+            }
             hits_.push_back(sh);
         }
     } else {
@@ -110,6 +142,15 @@ void PlinkoAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
     float* L = buffer.getWritePointer(0);
     float* R = buffer.getNumChannels() > 1 ? buffer.getWritePointer(1) : L;
     engine_.process(L, R, n, hits_.data(), (int)hits_.size());
+    if (capDry) {                       // input mode: crossfade the live dry signal back in
+        const bool stereo = buffer.getNumChannels() > 1;
+        const float dw = userDryWet;
+        for (int i = 0; i < n; ++i) {
+            float wl = L[i], wr = stereo ? R[i] : wl;
+            L[i] = dryCopyL_[i] * (1.0f - dw) + wl * dw;
+            if (stereo) R[i] = dryCopyR_[i] * (1.0f - dw) + wr * dw;
+        }
+    }
     buffer.applyGain(level);
 
     const float xMin = kBoardCenterX - board_.width * 0.5f;   // centered span -> 0..1 across the board

@@ -168,6 +168,15 @@ keyboard via keyPressed + setWantsKeyboardFocus), PluginProcessor Edit queue (bu
 PhysicsCore (bulk rebuild on Reset/BulkSet). Per-peg size already exists.
 - **Priority:** P1 (next build).
 
+### Live input path — DONE on v0.2-dev 2026-06-18
+- Source choice param (Synth | Input). Input mode: processor writes incoming audio to a 2s mono
+  ring (inRing_); each peg hit grabs the last ~grainSeconds of it (inputStart) and plays it as a
+  grain through the per-peg delay/reverb. Engine forced to full-wet in input mode; processor
+  crossfades the live dry signal back via the Dry/Wet macro. SoundEngine fromInput read now wraps
+  (ring) + null-safe. ComboBox in the transport row.
+- FOLLOW-UPS: input grains are NOT pitch-shifted (y/pitch ignored for input; only pan/bright/
+  level/routing apply) -- could add resampling for pitched grains. No input-gain/trim control yet.
+
 ## Open product questions to revisit
 
 - **Transport-stopped behavior:** when the DAW transport stops, should the ball freeze or

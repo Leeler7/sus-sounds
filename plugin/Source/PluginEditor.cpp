@@ -59,6 +59,12 @@ PlinkoAudioProcessorEditor::PlinkoAudioProcessorEditor(PlinkoAudioProcessor& p)
         board_.revertToDefault();                        // board back to baseline
     };
 
+    addAndMakeVisible(sourceBox_);
+    sourceBox_.addItem("Synth", 1);
+    sourceBox_.addItem("Input", 2);
+    sourceAtt_ = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(
+        proc_.apvts, pid::source, sourceBox_);
+
     // Shape
     addKnob(gravity_,    pid::gravity,    "Gravity");
     addKnob(boardWidth_, pid::boardWidth, "Width");
@@ -130,6 +136,7 @@ void PlinkoAudioProcessorEditor::resized() {
     playStop_.setBounds(top.removeFromLeft(80).reduced(2));
     clearBtn_.setBounds(top.removeFromLeft(70).reduced(2));
     revertBtn_.setBounds(top.removeFromLeft(70).reduced(2));
+    sourceBox_.setBounds(top.removeFromLeft(110).reduced(2));
 
     auto shape = r.removeFromTop(82);   // Shape section
     layRow(shape, { &gravity_, &boardWidth_, &ballSize_, &ballBounce_ });

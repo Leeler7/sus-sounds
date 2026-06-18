@@ -124,8 +124,9 @@ void SoundEngine::process(float* outL, float* outR, int n, const ScheduledHit* h
             if (!v.active) continue;
 
             float s;
-            if (v.fromInput) {                 // grain of the input audio
-                float x = (v.inPos >= 0 && v.inPos < inLen_) ? input_[v.inPos] : 0.0f;
+            if (v.fromInput) {                 // grain of the input audio (ring buffer of recent input)
+                float x = 0.0f;
+                if (input_ != nullptr && inLen_ > 0) x = input_[v.inPos % inLen_];   // wrap
                 ++v.inPos;
                 v.lp += v.lpCoef * (x - v.lp); // one-pole lowpass (brightness)
                 s = v.lp;

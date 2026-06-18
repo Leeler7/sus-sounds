@@ -15,6 +15,7 @@ namespace pid {
     static constexpr const char* panWidth    = "panWidth";
     static constexpr const char* dryWet      = "dryWet";
     static constexpr const char* level       = "level";
+    static constexpr const char* source      = "source";   // 0 = Synth (exciter), 1 = live Input
 }
 
 inline juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout() {
@@ -45,5 +46,7 @@ inline juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout
     add(pid::panWidth,    "Width",        NormalisableRange<float>(0.0f, 1.0f),        0.5f);  // noon (modulate wider/narrower)
     add(pid::dryWet,      "Dry/Wet",      NormalisableRange<float>(0.0f, 1.0f),        0.5f);  // half wet
     add(pid::level,       "Level",        NormalisableRange<float>(0.0f, 2.0f),        1.0f);  // unity at noon
+    p.push_back(std::make_unique<AudioParameterChoice>(ParameterID{ pid::source, 1 }, "Source",
+                                                       StringArray{ "Synth", "Input" }, 0));
     return { p.begin(), p.end() };
 }

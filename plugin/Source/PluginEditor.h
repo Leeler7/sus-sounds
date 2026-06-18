@@ -26,6 +26,8 @@ private:
     BoardComponent board_;
 
     juce::TextButton playStop_, clearBtn_, revertBtn_;
+    juce::ComboBox sourceBox_;   // Synth (exciter) vs live Input
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> sourceAtt_;
 
     Knob gravity_, boardWidth_, ballSize_, ballBounce_;    // Shape
     juce::TextButton delayBrushBtn_;                        // Delay panel

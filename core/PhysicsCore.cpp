@@ -246,14 +246,15 @@ void PhysicsWorld::stepOnce(std::vector<Collision>& out) {
         out.push_back(c);
     }
 
-    // No-stuck protocol: act ONLY when the ball is genuinely at rest (slow for a sustained
-    // stretch -- long enough to ignore the brief slow-down at a bounce apex). Then a GENTLE,
-    // slightly-escalating, mass-scaled horizontal kick. Only if several nudges fail to free it
-    // do we time out and respawn. A healthy, still-bouncing ball is never interrupted.
+    // No-stuck protocol: "at rest" means slow AND not contacting a peg this step. Any contact
+    // (a bounce/clatter) resets the timer, so a decaying clatter plays out fully -- only a truly
+    // silent, balanced ball accrues rest. Then a GENTLE, slightly-escalating horizontal kick;
+    // if a couple of nudges don't free it, a SHORT timeout respawns. Lively balls are never touched.
     bool stuckTimeout = false;
+    bool contacting = (ce.beginCount > 0);   // still bouncing/clattering this step?
     b2Vec2 v = b2Body_GetLinearVelocity(ball_);
     float speed = std::sqrt(v.x * v.x + v.y * v.y);
-    if (speed < p_.energyFloor) { ++slowCount_; movingCount_ = 0; }
+    if (speed < p_.energyFloor && !contacting) { ++slowCount_; movingCount_ = 0; }
     else { slowCount_ = 0; if (++movingCount_ > p_.stuckSteps) nudgeTries_ = 0; }  // freed -> fresh tries
     if (slowCount_ >= p_.stuckSteps) {
         if (nudgeTries_ < p_.maxNudges) {

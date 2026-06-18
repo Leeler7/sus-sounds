@@ -27,7 +27,8 @@ Hit pegToTap(const Collision& c, const EngineParams& ep) {
 
     // energy -> level + brightness (harder hit = louder + brighter; bumpers accent naturally)
     float e = clampf(c.energy / 5.0f, 0.0f, 1.0f);
-    h.level = 0.18f + 0.60f * e;
+    h.level = 0.06f + 0.85f * e;   // wide dynamic range so a decaying clatter fades toward silence
+                                   // (the "quarter settling on a table" decrescendo)
     float baseBright = 0.20f + 0.80f * e;
     h.brightness = clampf(baseBright * (0.4f + 1.2f * ep.tone), 0.03f, 1.0f);  // global tone bias
     h.type = c.type;

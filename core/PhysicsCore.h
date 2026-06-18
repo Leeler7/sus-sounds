@@ -42,11 +42,13 @@ struct BoardParams {
     float initialVx = 0.0f;   // no sideways launch -> every drop is identical (down from dropX);
                               // the off-center dropX already breaks symmetry for a cascade
     float exitY = 0.04f;      // ball below this = exited -> respawn
-    float energyFloor = 0.05f;// below this speed the ball counts as "at rest"
+    float energyFloor = 0.05f;// below this speed AND not contacting a peg = "at rest"
     float nudge = 0.35f;      // GENTLE horizontal velocity kick when genuinely stuck (escalates per try)
-    int   stuckSteps = 300;   // must be at rest this many sim steps (~0.3s) before nudging -- long
-                              // enough to ignore the brief slow-down at a bounce apex (no phantom push)
-    int   maxNudges = 3;      // gentle nudges to try before giving up and respawning (the timeout)
+    int   stuckSteps = 120;   // sim steps at rest (~0.12s) before nudging. RESET BY ANY PEG CONTACT,
+                              // so a decaying "quarter-on-a-table" clatter plays out fully -- only a
+                              // truly silent, non-bouncing ball accrues this (no phantom push).
+    int   maxNudges = 2;      // gentle nudges before giving up and respawning -> a SHORT timeout once
+                              // the ball is genuinely motionless (~0.12s x (maxNudges+1) total)
     double maxLoopSeconds = 8.0; // legacy absolute backstop -- NO LONGER USED; the timeout is now
                               // motion-based (stuck + failed nudges) so a lively run is never cut off
 

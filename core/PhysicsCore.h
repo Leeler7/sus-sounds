@@ -42,10 +42,13 @@ struct BoardParams {
     float initialVx = 0.0f;   // no sideways launch -> every drop is identical (down from dropX);
                               // the off-center dropX already breaks symmetry for a cascade
     float exitY = 0.04f;      // ball below this = exited -> respawn
-    float energyFloor = 0.05f;// below this speed = "slow"
-    float nudge = 0.8f;       // desired horizontal velocity kick when genuinely stuck (m/s)
-    int   stuckSteps = 80;    // must be slow this many sim steps (~0.08s) before nudging
-    double maxLoopSeconds = 8.0; // hard timeout backstop -> teleport+respawn
+    float energyFloor = 0.05f;// below this speed the ball counts as "at rest"
+    float nudge = 0.35f;      // GENTLE horizontal velocity kick when genuinely stuck (escalates per try)
+    int   stuckSteps = 300;   // must be at rest this many sim steps (~0.3s) before nudging -- long
+                              // enough to ignore the brief slow-down at a bounce apex (no phantom push)
+    int   maxNudges = 3;      // gentle nudges to try before giving up and respawning (the timeout)
+    double maxLoopSeconds = 8.0; // legacy absolute backstop -- NO LONGER USED; the timeout is now
+                              // motion-based (stuck + failed nudges) so a lively run is never cut off
 
     int   pegCount = 0;
     float pegX[128];
@@ -118,7 +121,9 @@ private:
     double simTime_ = 0.0;
     double loopStart_ = 0.0;
     long long rawBegins_ = 0;   // debug: total raw begin-touch events seen
-    int slowCount_ = 0;         // consecutive sim steps the ball has been "slow"
+    int slowCount_ = 0;         // consecutive sim steps the ball has been "at rest"
+    int movingCount_ = 0;       // consecutive sim steps the ball has been moving (resets escalation)
+    int nudgeTries_ = 0;        // gentle nudges attempted in the current stuck episode
     b2BodyId  pegBody_[128]{};  // per-peg Box2D body (for live move/delete)
     b2ShapeId pegShape_[128]{}; // per-peg shape (for live type change via userData)
 

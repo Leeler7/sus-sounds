@@ -43,6 +43,8 @@ void PhysicsWorld::init(uint64_t seed, const BoardParams& params) {
     loopStart_ = 0.0;
     rawBegins_ = 0;
     slowCount_ = 0;
+    movingCount_ = 0;
+    nudgeTries_ = 0;
     rng_.seed(seed, 1);
 
     b2WorldDef wd = b2DefaultWorldDef();
@@ -217,6 +219,8 @@ void PhysicsWorld::respawn() {
     b2DestroyBody(ball_);
     createBall();
     slowCount_ = 0;
+    movingCount_ = 0;
+    nudgeTries_ = 0;
     loopStart_ = simTime_;
 }
 
@@ -242,17 +246,26 @@ void PhysicsWorld::stepOnce(std::vector<Collision>& out) {
         out.push_back(c);
     }
 
-    // No-stuck: only when the ball has been slow for a sustained stretch (genuinely
-    // stuck -- not at the initial drop or at a bounce apex). Apply a small, mass-scaled,
-    // purely horizontal seeded kick so it can't launch the ball out of the board.
+    // No-stuck protocol: act ONLY when the ball is genuinely at rest (slow for a sustained
+    // stretch -- long enough to ignore the brief slow-down at a bounce apex). Then a GENTLE,
+    // slightly-escalating, mass-scaled horizontal kick. Only if several nudges fail to free it
+    // do we time out and respawn. A healthy, still-bouncing ball is never interrupted.
+    bool stuckTimeout = false;
     b2Vec2 v = b2Body_GetLinearVelocity(ball_);
     float speed = std::sqrt(v.x * v.x + v.y * v.y);
-    if (speed < p_.energyFloor) ++slowCount_; else slowCount_ = 0;
+    if (speed < p_.energyFloor) { ++slowCount_; movingCount_ = 0; }
+    else { slowCount_ = 0; if (++movingCount_ > p_.stuckSteps) nudgeTries_ = 0; }  // freed -> fresh tries
     if (slowCount_ >= p_.stuckSteps) {
-        float mass = b2Body_GetMass(ball_);
-        float dir = rng_.nextSigned();
-        b2Body_ApplyLinearImpulseToCenter(ball_, b2Vec2{ mass * p_.nudge * dir, 0.0f }, true);
-        slowCount_ = 0;
+        if (nudgeTries_ < p_.maxNudges) {
+            float mass = b2Body_GetMass(ball_);
+            float mag  = p_.nudge * (1.0f + 0.5f * (float)nudgeTries_);   // gentle, escalates each try
+            float dir  = rng_.nextSigned();
+            b2Body_ApplyLinearImpulseToCenter(ball_, b2Vec2{ mass * mag * dir, 0.0f }, true);
+            ++nudgeTries_;
+            slowCount_ = 0;
+        } else {
+            stuckTimeout = true;   // nudges exhausted and still at rest -> time out (respawn)
+        }
     }
 
     // Containment: keep the ball inside the frame (left/right/top). Catches any tunneling
@@ -269,9 +282,10 @@ void PhysicsWorld::stepOnce(std::vector<Collision>& out) {
 
     simTime_ += SIM_DT;
 
-    // Exit (fell past the bottom) or hard timeout -> respawn.
+    // Respawn ONLY on a real exit (fell past the bottom) or when genuinely stuck despite nudges.
+    // No motion-independent timeout -- a lively run keeps going.
     b2Vec2 pos = b2Body_GetPosition(ball_);
-    if (pos.y <= p_.exitY || (simTime_ - loopStart_) >= p_.maxLoopSeconds)
+    if (pos.y <= p_.exitY || stuckTimeout)
         respawn();
 }
 

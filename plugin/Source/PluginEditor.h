@@ -25,7 +25,10 @@ private:
     PlinkoAudioProcessor& proc_;
     BoardComponent board_;
 
-    juce::TextButton playStop_, clearBtn_, revertBtn_, loadWavBtn_, saveBtn_, loadBtn_;
+    juce::TextButton playStop_, clearBtn_, revertBtn_, loadWavBtn_, saveBtn_;
+    juce::ComboBox presetBox_;                 // factory + user presets
+    juce::Array<juce::File> userPresetFiles_;  // user .plinko files (combo ids 100+)
+    void rebuildPresetMenu();
     juce::ComboBox sourceBox_;   // Synth (exciter) / live Input / WAV loop
     juce::ComboBox inputModeBox_;// Granular / Live (input behavior)
     std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> sourceAtt_, inputModeAtt_;

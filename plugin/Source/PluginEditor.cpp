@@ -218,35 +218,47 @@ PlinkoAudioProcessorEditor::PlinkoAudioProcessorEditor(PlinkoAudioProcessor& p)
     // default to the delay brush (bus presets are initialized in BoardComponent)
     selectBrush(0);
 
+    addAndMakeVisible(presetBox_);
+    presetBox_.setTextWhenNothingSelected("Presets");
+    rebuildPresetMenu();
+    presetBox_.onChange = [this] {
+        int id = presetBox_.getSelectedId();
+        const int nFac = proc_.factoryPresetNames().size();
+        if (id >= 1 && id <= nFac)                         proc_.loadFactoryPreset(id - 1);
+        else if (id >= 100 && (id - 100) < userPresetFiles_.size()) proc_.loadPatch(userPresetFiles_[id - 100]);
+        else return;
+        refreshFromProcessor();
+    };
+
     addAndMakeVisible(saveBtn_);
     saveBtn_.setButtonText("Save");
     saveBtn_.onClick = [this] {
-        patchChooser_ = std::make_unique<juce::FileChooser>("Save patch", juce::File{}, "*.plinko");
+        patchChooser_ = std::make_unique<juce::FileChooser>("Save preset", PlinkoAudioProcessor::presetsDir(), "*.plinko");
         auto self = juce::Component::SafePointer<PlinkoAudioProcessorEditor>(this);
         patchChooser_->launchAsync(juce::FileBrowserComponent::saveMode | juce::FileBrowserComponent::canSelectFiles
                                    | juce::FileBrowserComponent::warnAboutOverwriting,
             [self](const juce::FileChooser& fc) {
                 if (self == nullptr) return;
                 auto f = fc.getResult();
-                if (f != juce::File{}) self->proc_.savePatch(f.withFileExtension("plinko"));
-            });
-    };
-    addAndMakeVisible(loadBtn_);
-    loadBtn_.setButtonText("Load");
-    loadBtn_.onClick = [this] {
-        patchChooser_ = std::make_unique<juce::FileChooser>("Load patch", juce::File{}, "*.plinko");
-        auto self = juce::Component::SafePointer<PlinkoAudioProcessorEditor>(this);
-        patchChooser_->launchAsync(juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles,
-            [self](const juce::FileChooser& fc) {
-                if (self == nullptr) return;
-                auto f = fc.getResult();
-                if (f != juce::File{} && self->proc_.loadPatch(f)) self->refreshFromProcessor();
+                if (f != juce::File{}) { self->proc_.savePatch(f.withFileExtension("plinko")); self->rebuildPresetMenu(); }
             });
     };
 
     setResizable(true, true);
     setResizeLimits(820, 520, 1600, 1100);
     setSize(940, 620);
+}
+
+void PlinkoAudioProcessorEditor::rebuildPresetMenu() {
+    presetBox_.clear(juce::dontSendNotification);
+    userPresetFiles_.clear();
+    auto fac = proc_.factoryPresetNames();
+    for (int i = 0; i < fac.size(); ++i) presetBox_.addItem(fac[i], i + 1);   // ids 1..N
+    auto files = PlinkoAudioProcessor::presetsDir().findChildFiles(juce::File::findFiles, false, "*.plinko");
+    if (files.size() > 0) {
+        presetBox_.addSeparator();
+        for (int i = 0; i < files.size(); ++i) { userPresetFiles_.add(files[i]); presetBox_.addItem(files[i].getFileNameWithoutExtension(), 100 + i); }
+    }
 }
 
 void PlinkoAudioProcessorEditor::refreshFromProcessor() {
@@ -290,8 +302,8 @@ void PlinkoAudioProcessorEditor::resized() {
     inputModeBox_.setBounds(top.removeFromLeft(96).reduced(2));
     loadWavBtn_.setBounds(top.removeFromLeft(84).reduced(2));
     busBox_.setBounds(top.removeFromLeft(74).reduced(2));
+    presetBox_.setBounds(top.removeFromLeft(120).reduced(2));
     saveBtn_.setBounds(top.removeFromLeft(56).reduced(2));
-    loadBtn_.setBounds(top.removeFromLeft(56).reduced(2));
 
     auto shape = r.removeFromTop(82);   // Shape section
     layRow(shape, { &gravity_, &boardWidth_, &ballSize_, &ballBounce_ });

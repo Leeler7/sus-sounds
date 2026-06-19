@@ -63,9 +63,14 @@ public:
     float busTone  (int bus, int type) const { return busTone_  [bus & (kNumBuses-1)][type & 1]; }
     void  resetBusPresets();    // all buses + effects back to default
 
-    // Patch files (Save/Load buttons) -- same serialization as the host state.
+    // Patch files (Save/Load + preset menu) -- same serialization as the host state.
     void savePatch(const juce::File&);
     bool loadPatch(const juce::File&);
+
+    // Presets: built-in factory patches + the user-presets folder.
+    juce::StringArray factoryPresetNames() const;
+    void loadFactoryPreset(int index);
+    static juce::File presetsDir();
 
     // GUI thread: enqueue a single live peg edit. The audio thread applies it to the
     // running physics next block (no re-init -> the ball keeps flowing).

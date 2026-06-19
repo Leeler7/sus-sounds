@@ -313,6 +313,34 @@ bool PlinkoAudioProcessor::loadPatch(const juce::File& f) {
     return false;
 }
 
+juce::StringArray PlinkoAudioProcessor::factoryPresetNames() const {
+    return { "Init", "Classic Plinko" };
+}
+
+juce::File PlinkoAudioProcessor::presetsDir() {
+    auto d = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
+                 .getChildFile("PlinkoDelay").getChildFile("Presets");
+    d.createDirectory();
+    return d;
+}
+
+void PlinkoAudioProcessor::loadFactoryPreset(int index) {
+    resetBusPresets();                                   // buses + brush presets to default
+    board_ = defaultBoard();
+    { Edit ed; ed.type = EditType::Reset; pushEdit(ed); }// physics back to the default board
+    for (auto* p : getParameters()) p->setValueNotifyingHost(p->getDefaultValue());  // knobs to default
+
+    if (index == 1) {   // Classic Plinko: real-Plinko physics feel (synth source, default board/buses)
+        auto setP = [this](const char* id, float v) {
+            if (auto* pr = apvts.getParameter(id)) pr->setValueNotifyingHost(pr->convertTo0to1(v));
+        };
+        setP(pid::gravity,    20.33f);
+        setP(pid::ballSize,   0.06f);
+        setP(pid::ballBounce, 0.864f);
+    }
+    // index 0 = Init (pure defaults, already applied)
+}
+
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter() {
     return new PlinkoAudioProcessor();
 }

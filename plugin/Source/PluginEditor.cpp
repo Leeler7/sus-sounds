@@ -155,8 +155,8 @@ PlinkoAudioProcessorEditor::PlinkoAudioProcessorEditor(PlinkoAudioProcessor& p)
     addBrush(delayBounce_, delayBounceL_, "Bounce", 0.0, 2.0, 1.0,  [this](double v) { board_.setBusBounce(activeBus_, 0, (float)v); });
     addBrush(delaySize_,   delaySizeL_,   "Size",   0.005, 0.06, 0.0225, [this](double v) { board_.setBusSize(activeBus_, 0, (float)v); });
     delaySize_.setSkewFactorFromMidPoint(0.0225);   // default peg size at noon (matches the board)
-    addBrush(delaySend_,  delaySendL_,  "Send",  0.0, 1.0, 1.0, [this](double v) { board_.setBusSend(activeBus_, 0, (float)v); });
-    addBrush(delayLevel_, delayLevelL_, "Level", 0.0, 2.0, 1.0, [this](double v) { board_.setBusLevel(activeBus_, 0, (float)v); });
+    addBrush(delaySend_,  delaySendL_,  "Send",  0.0, 2.0, 1.0, [this](double v) { board_.setBusSend(activeBus_, 0, (float)v); });
+    addBrush(delayLevel_, delayLevelL_, "Level", 0.0, 4.0, 1.0, [this](double v) { board_.setBusLevel(activeBus_, 0, (float)v); });
     addBrush(delayTone_,  delayToneL_,  "Tone",  0.0, 1.0, 0.5, [this](double v) { board_.setBusTone(activeBus_, 0, (float)v); });
 
     // Per-bus effect sliders (edit the ACTIVE bus; non-APVTS, written straight to the processor).
@@ -173,7 +173,7 @@ PlinkoAudioProcessorEditor::PlinkoAudioProcessorEditor(PlinkoAudioProcessor& p)
     };
     setupBus(feedback_, feedbackL_, "Feedback", 0.0, 0.95, 0.62);
     feedback_.onValueChange = [this] { proc_.busFeedback_[activeBus_].store((float)feedback_.getValue()); };
-    setupBus(delayMix_, delayMixL_, "Mix", 0.0, 1.0, 0.0);
+    setupBus(delayMix_, delayMixL_, "Mix", 0.0, 2.0, 0.0);
     delayMix_.onValueChange = [this] { proc_.busDelayMix_[activeBus_].store((float)delayMix_.getValue()); };
 
     // Reverb panel (right)
@@ -187,12 +187,12 @@ PlinkoAudioProcessorEditor::PlinkoAudioProcessorEditor(PlinkoAudioProcessor& p)
     addBrush(reverbBounce_, reverbBounceL_, "Bounce", 0.0, 2.0, 1.0,  [this](double v) { board_.setBusBounce(activeBus_, 1, (float)v); });
     addBrush(reverbSize_,   reverbSizeL_,   "Size",   0.005, 0.06, 0.0225, [this](double v) { board_.setBusSize(activeBus_, 1, (float)v); });
     reverbSize_.setSkewFactorFromMidPoint(0.0225);   // default peg size at noon (matches the board)
-    addBrush(reverbSend_,  reverbSendL_,  "Send",  0.0, 1.0, 1.0, [this](double v) { board_.setBusSend(activeBus_, 1, (float)v); });
-    addBrush(reverbLevel_, reverbLevelL_, "Level", 0.0, 2.0, 1.0, [this](double v) { board_.setBusLevel(activeBus_, 1, (float)v); });
+    addBrush(reverbSend_,  reverbSendL_,  "Send",  0.0, 2.0, 1.0, [this](double v) { board_.setBusSend(activeBus_, 1, (float)v); });
+    addBrush(reverbLevel_, reverbLevelL_, "Level", 0.0, 4.0, 1.0, [this](double v) { board_.setBusLevel(activeBus_, 1, (float)v); });
     addBrush(reverbTone_,  reverbToneL_,  "Tone",  0.0, 1.0, 0.5, [this](double v) { board_.setBusTone(activeBus_, 1, (float)v); });
     setupBus(reverbDecay_, reverbDecayL_, "Rev Size", 0.5, 0.95, 0.85);
     reverbDecay_.onValueChange = [this] { proc_.busReverbDecay_[activeBus_].store((float)reverbDecay_.getValue()); };
-    setupBus(reverbMix_, reverbMixL_, "Mix", 0.0, 1.0, 0.0);
+    setupBus(reverbMix_, reverbMixL_, "Mix", 0.0, 2.0, 0.0);
     reverbMix_.onValueChange = [this] { proc_.busReverbMix_[activeBus_].store((float)reverbMix_.getValue()); };
 
     addAndMakeVisible(busBox_);

@@ -91,6 +91,7 @@ void SoundEngine::startVoice(const Hit& h) {
     v.atkN = (int)(0.002 * sr_);   // 2 ms attack (fast, but click-free)
     v.atkPos = 0;
     v.fromInput = useInput_;        // effect path: play a grain of the input
+    if (v.fromInput) v.amp *= 6.0f; // makeup: WAV grains are far below the synth's full-scale level
     v.inPos = h.inputStart;
     v.tEnv = 1.0f;                   // onset transient (input transient designer): decay over ~45 ms
     v.tMul = std::exp(-6.9f / (0.045f * (float)sr_));

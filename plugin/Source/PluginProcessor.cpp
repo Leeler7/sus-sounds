@@ -1,5 +1,6 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
+#include <cmath>
 
 PlinkoAudioProcessor::PlinkoAudioProcessor()
     : AudioProcessor(BusesProperties()
@@ -200,6 +201,10 @@ void PlinkoAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
         }
     }
     buffer.applyGain(level);
+    {   // soft clip: pushing the gains hard saturates gracefully instead of clipping harshly
+        const bool st = buffer.getNumChannels() > 1;
+        for (int i = 0; i < n; ++i) { L[i] = std::tanh(L[i]); if (st) R[i] = std::tanh(R[i]); }
+    }
 
     const float xMin = kBoardCenterX - board_.width * 0.5f;   // centered span -> 0..1 across the board
     ballNX.store((physics_.dbgBallX() - xMin) / board_.width, std::memory_order_relaxed);

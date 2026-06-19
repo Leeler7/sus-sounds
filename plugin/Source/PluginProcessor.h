@@ -74,7 +74,6 @@ private:
 
     std::vector<float> inRing_;   int inWrite_ = 0, inRingLen_ = 1;  // mono history of recent input (grain source)
     std::vector<float> dryCopyL_, dryCopyR_;                          // dry block stashed for input-mode passthrough
-    std::vector<float> liveBlock_;                                   // this block's mono input (Live mode gate source)
     std::vector<float> wav_;      int wavPos_ = 0;                    // WAV-loop test source (audio thread)
     std::vector<float> wavPending_;                                  // GUI hands a new loop over here
     std::atomic<bool>  wavReady_{ false };

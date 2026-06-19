@@ -56,11 +56,14 @@ public:
     // Effect path: set the input audio (mono). Hits then play grains OF this input
     // instead of synthesized exciter tones. Call after prepare().
     void setInput(const float* mono, int len);
-    // Live input mode: peg hits gate the live signal into the buses (vs granular snapshot playback).
+    // Live input: each peg throw reads the input FORWARD from the strike, length = Hold (vs granular's
+    // short backward snapshot). Both are percussive voices; this only changes read direction + length.
     void setLiveMode(bool b) { liveMode_ = b; }
-    // Render n samples. `hits` must be sorted by ascending offset. `live` = the current block's
-    // mono input (used only in live mode); pass nullptr otherwise.
-    void process(float* outL, float* outR, int n, const ScheduledHit* hits, int nHits, const float* live = nullptr);
+    // Input source: input voices are heard DIRECTLY (the percussive throw) as well as feeding the
+    // effects, so the strikes are prominent (not just faint echoes). Off for the synth source.
+    void setInputMix(bool b) { inputMix_ = b; }
+    // Render n samples. `hits` must be sorted by ascending offset.
+    void process(float* outL, float* outR, int n, const ScheduledHit* hits, int nHits);
 
 private:
     struct Voice {
@@ -95,7 +98,6 @@ private:
     std::vector<float> ap_[kNumBuses][2];    int apLen_[2]{},  apPos_[kNumBuses][2]{};       // per-bus allpasses
     float combLp_[kNumBuses][4]{};            // reverb comb HF-damping state (room/hall darkening)
 
-    bool  liveMode_ = false;                  // Live input: gate the live signal into buses (vs granular)
-    float gateD_[kNumBuses]{}, gateR_[kNumBuses]{};         // per-bus delay/reverb live-input gate envelopes
-    float gateDPanL_[kNumBuses]{}, gateDPanR_[kNumBuses]{}; // pan for the delay gate
+    bool  liveMode_ = false;   // Live = throw reads forward (Hold-length); granular = backward snapshot (grainSeconds)
+    bool  inputMix_ = false;   // input source: input voices heard directly + feed effects (prominent throws)
 };

@@ -84,8 +84,10 @@ void SoundEngine::startVoice(const Hit& h) {
     v.bus  = (h.bus < 0 || h.bus >= kNumBuses) ? 0 : h.bus;
     v.send = h.send;
     v.env = 1.0f;
-    // decay to ~0.1% by grainSeconds, so grainSeconds is the real grain LENGTH
-    v.envMul = std::exp(-6.9f / (ep_.grainSeconds * (float)sr_));
+    // decay to ~0.1% by the throw length: Hold in live mode (long throw), grainSeconds otherwise
+    float len = liveMode_ ? ep_.holdSeconds : ep_.grainSeconds;
+    if (len < 0.01f) len = 0.01f;
+    v.envMul = std::exp(-6.9f / (len * (float)sr_));
     v.atkN = (int)(0.002 * sr_);   // 2 ms attack (fast, but click-free)
     v.atkPos = 0;
     v.fromInput = useInput_;        // effect path: play a grain of the input
@@ -132,24 +134,10 @@ float SoundEngine::reverbProcess(int bus, float in) {
     return out;
 }
 
-void SoundEngine::process(float* outL, float* outR, int n, const ScheduledHit* hits, int nHits, const float* live) {
-    // Live-input gate release per sample (decay toward 0 over ~holdSeconds).
-    float tc = (float)(ep_.holdSeconds * sr_); if (tc < 1.0f) tc = 1.0f;
-    const float gateRel = std::exp(-1.0f / tc);
+void SoundEngine::process(float* outL, float* outR, int n, const ScheduledHit* hits, int nHits) {
     int h = 0;
     for (int i = 0; i < n; ++i) {
-        while (h < nHits && hits[h].offset <= i) {
-            if (liveMode_) {                   // Live: a hit opens its bus's gate (no grain voice)
-                const Hit& ht = hits[h].hit;
-                int b = (ht.bus < 0 || ht.bus >= kNumBuses) ? 0 : ht.bus;
-                float amp = ht.level * ht.send;
-                if (ht.type == 0) { if (amp > gateD_[b]) { gateD_[b] = amp; gateDPanL_[b] = ht.panL; gateDPanR_[b] = ht.panR; } }
-                else              { if (amp > gateR_[b]) gateR_[b] = amp; }
-            } else {
-                startVoice(hits[h].hit);
-            }
-            ++h;
-        }
+        while (h < nHits && hits[h].offset <= i) { startVoice(hits[h].hit); ++h; }
 
         float dryL = 0.0f, dryR = 0.0f;
         float delInL[kNumBuses] = { 0 }, delInR[kNumBuses] = { 0 }, revIn[kNumBuses] = { 0 };
@@ -183,7 +171,7 @@ void SoundEngine::process(float* outL, float* outR, int n, const ScheduledHit* h
             float l = val * v.panL, r = val * v.panR;
             // input grains route ONLY to the wet busses (the continuous dry input is mixed
             // by the host/harness); exciter tones include their own dry.
-            bool addDry = !v.fromInput;
+            bool addDry = (!v.fromInput) || inputMix_;   // input throws are heard directly too (prominent)
             const int b = v.bus;
             if (v.type == 0) {                 // delay peg: (dry) + wet send into its bus's delay line
                 if (addDry) { dryL += l; dryR += r; }
@@ -191,14 +179,6 @@ void SoundEngine::process(float* outL, float* outR, int n, const ScheduledHit* h
             } else {                           // reverb peg: wet send into its bus's reverb (splash)
                 if (addDry) { dryL += l * 0.3f; dryR += r * 0.3f; }
                 revIn[b] += (l + r) * 0.5f * v.send;
-            }
-        }
-
-        if (liveMode_ && live != nullptr) {       // feed the gated LIVE signal into each bus's effect
-            float x = live[i];
-            for (int b = 0; b < kNumBuses; ++b) {
-                if (gateD_[b] > 1e-5f) { float s = x * gateD_[b]; delInL[b] += s * gateDPanL_[b]; delInR[b] += s * gateDPanR_[b]; gateD_[b] *= gateRel; }
-                if (gateR_[b] > 1e-5f) { revIn[b] += x * gateR_[b]; gateR_[b] *= gateRel; }
             }
         }
 
@@ -229,8 +209,13 @@ void SoundEngine::process(float* outL, float* outR, int n, const ScheduledHit* h
             wetL += dlo * ep_.delayMix[b] + rv * ep_.reverbMix[b];
             wetR += dro * ep_.delayMix[b] + rv * ep_.reverbMix[b];
         }
-        float dry = 1.0f - ep_.dryWet;
-        outL[i] = dryL * dry + wetL * ep_.dryWet;
-        outR[i] = dryR * dry + wetR * ep_.dryWet;
+        if (inputMix_) {                 // input source: throws (direct) + effects, full -- the host
+            outL[i] = dryL + wetL;       // crossfades this against the continuous loop via Dry/Wet
+            outR[i] = dryR + wetR;
+        } else {                         // synth source: internal dry/wet crossfade
+            float dry = 1.0f - ep_.dryWet;
+            outL[i] = dryL * dry + wetL * ep_.dryWet;
+            outR[i] = dryR * dry + wetR * ep_.dryWet;
+        }
     }
 }

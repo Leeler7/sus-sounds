@@ -29,7 +29,6 @@ void PlinkoAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
     inWrite_ = 0;
     dryCopyL_.assign(juce::jmax(1, samplesPerBlock), 0.0f);
     dryCopyR_.assign(juce::jmax(1, samplesPerBlock), 0.0f);
-    liveBlock_.assign(juce::jmax(1, samplesPerBlock), 0.0f);
 }
 
 BoardParams PlinkoAudioProcessor::defaultBoard() {
@@ -93,7 +92,7 @@ void PlinkoAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
             }
             inRing_[inWrite_] = m;
             if (++inWrite_ >= inRingLen_) inWrite_ = 0;
-            if (capDry) { dryCopyL_[i] = dl; dryCopyR_[i] = dr; liveBlock_[i] = m; }
+            if (capDry) { dryCopyL_[i] = dl; dryCopyR_[i] = dr; }
         }
     }
 
@@ -145,10 +144,11 @@ void PlinkoAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
     // Input mode: feed the ring to the engine and let it output full wet (grain-fed delay/reverb);
     // the dry live signal is crossfaded back in below. Synth mode: no input, engine handles dry/wet.
     const float userDryWet = ep_.dryWet;
-    if (inputMode) { ep_.dryWet = 1.0f; engine_.setInput(inRing_.data(), inRingLen_); }
-    else             engine_.setInput(nullptr, 0);
+    if (inputMode) engine_.setInput(inRing_.data(), inRingLen_);
+    else           engine_.setInput(nullptr, 0);
     ep_.holdSeconds = apvts.getRawParameterValue(pid::hold)->load();
-    engine_.setLiveMode(inputMode && liveOn);   // Live = gate the live signal into the buses
+    engine_.setInputMix(inputMode);             // input throws heard directly + effects
+    engine_.setLiveMode(inputMode && liveOn);   // Live = forward Hold-length throw vs granular snapshot
     engine_.setParams(ep_);
 
     hits_.clear();
@@ -171,9 +171,10 @@ void PlinkoAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
                 sh.hit.level *= bp.pegLevel[c.peg];
                 sh.hit.brightness = juce::jlimit(0.03f, 1.0f, sh.hit.brightness * (0.5f + bp.pegTone[c.peg]));
             }
-            if (inputMode) {          // grab the last ~grainSeconds of the input at this hit
+            if (inputMode) {          // Live: read FORWARD from the strike; Granular: a short past snapshot
                 int gl = (int)(ep_.grainSeconds * sr_);
-                sh.hit.inputStart = ((w0 + off - gl) % inRingLen_ + inRingLen_) % inRingLen_;
+                int start = liveOn ? (w0 + off) : (w0 + off - gl);
+                sh.hit.inputStart = ((start % inRingLen_) + inRingLen_) % inRingLen_;
             } else {
                 sh.hit.inputStart = 0;
             }
@@ -186,8 +187,7 @@ void PlinkoAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
     buffer.clear();
     float* L = buffer.getWritePointer(0);
     float* R = buffer.getNumChannels() > 1 ? buffer.getWritePointer(1) : L;
-    const float* livePtr = (inputMode && n <= (int)liveBlock_.size()) ? liveBlock_.data() : nullptr;
-    engine_.process(L, R, n, hits_.data(), (int)hits_.size(), livePtr);
+    engine_.process(L, R, n, hits_.data(), (int)hits_.size());
     if (capDry) {                       // input mode: crossfade the live dry signal back in
         const bool stereo = buffer.getNumChannels() > 1;
         const float dw = userDryWet;

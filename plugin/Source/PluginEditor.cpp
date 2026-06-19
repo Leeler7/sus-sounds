@@ -212,7 +212,7 @@ PlinkoAudioProcessorEditor::PlinkoAudioProcessorEditor(PlinkoAudioProcessor& p)
     addKnob(width_,  pid::panWidth, "Stereo");
     addKnob(dryWet_, pid::dryWet,   "Dry/Wet");
     addKnob(level_,  pid::level,    "Level");
-    addKnob(hold_,   pid::hold,     "Hold");
+    addKnob(hold_,   pid::hold,     "Grain");
     addKnob(impact_, pid::impact,   "Impact");
 
     // default to the delay brush (bus presets are initialized in BoardComponent)

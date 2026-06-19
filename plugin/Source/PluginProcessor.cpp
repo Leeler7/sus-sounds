@@ -147,6 +147,7 @@ void PlinkoAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
     if (inputMode) engine_.setInput(inRing_.data(), inRingLen_);
     else           engine_.setInput(nullptr, 0);
     ep_.holdSeconds = apvts.getRawParameterValue(pid::hold)->load();
+    ep_.grainSeconds = ep_.holdSeconds;   // the Grain knob sizes both: granular grain + live throw length
     ep_.impact      = apvts.getRawParameterValue(pid::impact)->load();
     engine_.setInputMix(inputMode);             // input throws heard directly + effects
     engine_.setLiveMode(inputMode && liveOn);   // Live = forward Hold-length throw vs granular snapshot

@@ -25,7 +25,8 @@ void PlinkoAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
     sr_ = sampleRate;
     physics_.init(kSeed, board_);
     engine_.prepare(sampleRate, ep_);
-    inRingLen_ = juce::jmax(1, (int)(sampleRate * 2.0));   // 2s of input history for grains
+    inRingLen_ = juce::jmax(1, (int)(sampleRate * 4.0));   // 4s input history (> max Grain) so a big
+                                                           // grain is a true snapshot, not a wrap to live
     inRing_.assign(inRingLen_, 0.0f);
     inWrite_ = 0;
     dryCopyL_.assign(juce::jmax(1, samplesPerBlock), 0.0f);

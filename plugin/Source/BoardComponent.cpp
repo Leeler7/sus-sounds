@@ -21,19 +21,14 @@ namespace {
 
 BoardComponent::BoardComponent(PlinkoAudioProcessor& p) : proc_(p) {
     board_ = proc_.board();   // start from the processor's current board
-    resetBusPresets();
     setWantsKeyboardFocus(true);
     startTimerHz(60);
 }
 
-void BoardComponent::resetBusPresets() {
-    for (int b = 0; b < kNumBuses; ++b) {
-        busBounce_[b][0] = busBounce_[b][1] = 1.0f;
-        busSize_[b][0]   = busSize_[b][1]   = 0.0225f;
-        busSend_[b][0]   = busSend_[b][1]   = 1.0f;
-        busLevel_[b][0]  = busLevel_[b][1]  = 1.0f;
-        busTone_[b][0]   = busTone_[b][1]   = 0.5f;
-    }
+void BoardComponent::reloadFromProcessor() {   // after a patch load: re-sync the working board
+    board_ = proc_.board();
+    clearSelection();
+    repaint();
 }
 BoardComponent::~BoardComponent() { stopTimer(); }
 
@@ -122,13 +117,13 @@ bool BoardComponent::addPeg(float bx, float by) {
     int n = board_.pegCount;
     board_.pegX[n] = bx;
     board_.pegY[n] = by;
-    board_.pegType[n]  = brushType_;                          // active brush decides type...
-    board_.pegBus[n]   = brushBus_;                           // ...bus...
-    board_.pegRest[n]  = busBounce_[brushBus_][brushType_];   // ...and the bus's full peg profile
-    board_.pegRad[n]   = busSize_[brushBus_][brushType_];
-    board_.pegSend[n]  = busSend_[brushBus_][brushType_];
-    board_.pegLevel[n] = busLevel_[brushBus_][brushType_];
-    board_.pegTone[n]  = busTone_[brushBus_][brushType_];
+    board_.pegType[n]  = brushType_;                                 // active brush decides type...
+    board_.pegBus[n]   = brushBus_;                                  // ...bus...
+    board_.pegRest[n]  = proc_.busBounce(brushBus_, brushType_);     // ...and the bus's full peg profile
+    board_.pegRad[n]   = proc_.busSize(brushBus_, brushType_);
+    board_.pegSend[n]  = proc_.busSend(brushBus_, brushType_);
+    board_.pegLevel[n] = proc_.busLevel(brushBus_, brushType_);
+    board_.pegTone[n]  = proc_.busTone(brushBus_, brushType_);
     board_.pegCount = n + 1;
     return true;
 }
@@ -417,11 +412,11 @@ void BoardComponent::runMenuOp(int id) {
             for (int i : sel_) {
                 board_.pegType[i]  = brushType_;
                 board_.pegBus[i]   = brushBus_;
-                board_.pegRest[i]  = busBounce_[brushBus_][brushType_];
-                board_.pegRad[i]   = busSize_[brushBus_][brushType_];
-                board_.pegSend[i]  = busSend_[brushBus_][brushType_];
-                board_.pegLevel[i] = busLevel_[brushBus_][brushType_];
-                board_.pegTone[i]  = busTone_[brushBus_][brushType_];
+                board_.pegRest[i]  = proc_.busBounce(brushBus_, brushType_);
+                board_.pegRad[i]   = proc_.busSize(brushBus_, brushType_);
+                board_.pegSend[i]  = proc_.busSend(brushBus_, brushType_);
+                board_.pegLevel[i] = proc_.busLevel(brushBus_, brushType_);
+                board_.pegTone[i]  = proc_.busTone(brushBus_, brushType_);
             }
             break;
         case miBus1: case miBus2: case miBus3: case miBus4: {
@@ -429,11 +424,11 @@ void BoardComponent::runMenuOp(int id) {
             for (int i : sel_) {
                 int t = board_.pegType[i];
                 board_.pegBus[i]   = bus;
-                board_.pegRest[i]  = busBounce_[bus][t];
-                board_.pegRad[i]   = busSize_[bus][t];
-                board_.pegSend[i]  = busSend_[bus][t];
-                board_.pegLevel[i] = busLevel_[bus][t];
-                board_.pegTone[i]  = busTone_[bus][t];
+                board_.pegRest[i]  = proc_.busBounce(bus, t);
+                board_.pegRad[i]   = proc_.busSize(bus, t);
+                board_.pegSend[i]  = proc_.busSend(bus, t);
+                board_.pegLevel[i] = proc_.busLevel(bus, t);
+                board_.pegTone[i]  = proc_.busTone(bus, t);
             }
         } break;
         case miAlignRow: { float s = 0; for (int i : sel_) s += board_.pegY[i]; float a = s / sel_.size(); for (int i : sel_) board_.pegY[i] = a; } break;

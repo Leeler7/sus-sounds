@@ -40,16 +40,16 @@ void PlinkoAudioProcessorEditor::reloadBusSliders() {
     reverbDecay_.setValue(proc_.busReverbDecay_[activeBus_].load(), juce::dontSendNotification);
     reverbMix_.setValue(proc_.busReverbMix_[activeBus_].load(),     juce::dontSendNotification);
     // brush peg profile (read from the board's per-bus presets, the single source of truth)
-    delayBounce_.setValue(board_.busBounce(activeBus_, 0),  juce::dontSendNotification);
-    delaySize_.setValue(board_.busSize(activeBus_, 0),      juce::dontSendNotification);
-    delaySend_.setValue(board_.busSend(activeBus_, 0),      juce::dontSendNotification);
-    delayLevel_.setValue(board_.busLevel(activeBus_, 0),    juce::dontSendNotification);
-    delayTone_.setValue(board_.busTone(activeBus_, 0),      juce::dontSendNotification);
-    reverbBounce_.setValue(board_.busBounce(activeBus_, 1), juce::dontSendNotification);
-    reverbSize_.setValue(board_.busSize(activeBus_, 1),     juce::dontSendNotification);
-    reverbSend_.setValue(board_.busSend(activeBus_, 1),     juce::dontSendNotification);
-    reverbLevel_.setValue(board_.busLevel(activeBus_, 1),   juce::dontSendNotification);
-    reverbTone_.setValue(board_.busTone(activeBus_, 1),     juce::dontSendNotification);
+    delayBounce_.setValue(proc_.busBounce(activeBus_, 0),  juce::dontSendNotification);
+    delaySize_.setValue(proc_.busSize(activeBus_, 0),      juce::dontSendNotification);
+    delaySend_.setValue(proc_.busSend(activeBus_, 0),      juce::dontSendNotification);
+    delayLevel_.setValue(proc_.busLevel(activeBus_, 0),    juce::dontSendNotification);
+    delayTone_.setValue(proc_.busTone(activeBus_, 0),      juce::dontSendNotification);
+    reverbBounce_.setValue(proc_.busBounce(activeBus_, 1), juce::dontSendNotification);
+    reverbSize_.setValue(proc_.busSize(activeBus_, 1),     juce::dontSendNotification);
+    reverbSend_.setValue(proc_.busSend(activeBus_, 1),     juce::dontSendNotification);
+    reverbLevel_.setValue(proc_.busLevel(activeBus_, 1),   juce::dontSendNotification);
+    reverbTone_.setValue(proc_.busTone(activeBus_, 1),     juce::dontSendNotification);
     delayTypeBox_.setSelectedId(proc_.busDelayType_[activeBus_].load() + 1,   juce::dontSendNotification);
     reverbTypeBox_.setSelectedId(proc_.busReverbType_[activeBus_].load() + 1, juce::dontSendNotification);
 }
@@ -83,7 +83,7 @@ PlinkoAudioProcessorEditor::PlinkoAudioProcessorEditor(PlinkoAudioProcessor& p)
             proc_.busReverbDecay_[b] = 0.85f; proc_.busReverbMix_[b] = 0.5f;
             proc_.busDelayType_[b] = 0; proc_.busReverbType_[b] = 1;   // Digital / Hall
         }
-        board_.resetBusPresets();                        // per-bus bounce/size back to default
+        proc_.resetBusPresets();                        // per-bus bounce/size back to default
         busBox_.setSelectedId(1, juce::dontSendNotification); activeBus_ = 0;
         reloadBusSliders();
         selectBrush(0);
@@ -152,12 +152,12 @@ PlinkoAudioProcessorEditor::PlinkoAudioProcessorEditor(PlinkoAudioProcessor& p)
     delayTypeBox_.addItem("Digital", 1); delayTypeBox_.addItem("Analogue", 2);
     delayTypeBox_.addItem("Tape", 3);    delayTypeBox_.addItem("Ping-pong", 4);
     delayTypeBox_.onChange = [this] { proc_.busDelayType_[activeBus_].store(delayTypeBox_.getSelectedId() - 1); };
-    addBrush(delayBounce_, delayBounceL_, "Bounce", 0.0, 2.0, 1.0,  [this](double v) { board_.setBusBounce(activeBus_, 0, (float)v); });
-    addBrush(delaySize_,   delaySizeL_,   "Size",   0.005, 0.06, 0.0225, [this](double v) { board_.setBusSize(activeBus_, 0, (float)v); });
+    addBrush(delayBounce_, delayBounceL_, "Bounce", 0.0, 2.0, 1.0,  [this](double v) { proc_.setBusBounce(activeBus_, 0, (float)v); });
+    addBrush(delaySize_,   delaySizeL_,   "Size",   0.005, 0.06, 0.0225, [this](double v) { proc_.setBusSize(activeBus_, 0, (float)v); });
     delaySize_.setSkewFactorFromMidPoint(0.0225);   // default peg size at noon (matches the board)
-    addBrush(delaySend_,  delaySendL_,  "Send",  0.0, 2.0, 1.0, [this](double v) { board_.setBusSend(activeBus_, 0, (float)v); });
-    addBrush(delayLevel_, delayLevelL_, "Level", 0.0, 4.0, 1.0, [this](double v) { board_.setBusLevel(activeBus_, 0, (float)v); });
-    addBrush(delayTone_,  delayToneL_,  "Tone",  0.0, 1.0, 0.5, [this](double v) { board_.setBusTone(activeBus_, 0, (float)v); });
+    addBrush(delaySend_,  delaySendL_,  "Send",  0.0, 2.0, 1.0, [this](double v) { proc_.setBusSend(activeBus_, 0, (float)v); });
+    addBrush(delayLevel_, delayLevelL_, "Level", 0.0, 4.0, 1.0, [this](double v) { proc_.setBusLevel(activeBus_, 0, (float)v); });
+    addBrush(delayTone_,  delayToneL_,  "Tone",  0.0, 1.0, 0.5, [this](double v) { proc_.setBusTone(activeBus_, 0, (float)v); });
 
     // Per-bus effect sliders (edit the ACTIVE bus; non-APVTS, written straight to the processor).
     auto setupBus = [this](juce::Slider& s, juce::Label& l, const juce::String& name, double lo, double hi, double mid) {
@@ -184,12 +184,12 @@ PlinkoAudioProcessorEditor::PlinkoAudioProcessorEditor(PlinkoAudioProcessor& p)
     reverbTypeBox_.addItem("Room", 1);      reverbTypeBox_.addItem("Hall", 2);
     reverbTypeBox_.addItem("Cathedral", 3); reverbTypeBox_.addItem("Plate", 4);
     reverbTypeBox_.onChange = [this] { proc_.busReverbType_[activeBus_].store(reverbTypeBox_.getSelectedId() - 1); };
-    addBrush(reverbBounce_, reverbBounceL_, "Bounce", 0.0, 2.0, 1.0,  [this](double v) { board_.setBusBounce(activeBus_, 1, (float)v); });
-    addBrush(reverbSize_,   reverbSizeL_,   "Size",   0.005, 0.06, 0.0225, [this](double v) { board_.setBusSize(activeBus_, 1, (float)v); });
+    addBrush(reverbBounce_, reverbBounceL_, "Bounce", 0.0, 2.0, 1.0,  [this](double v) { proc_.setBusBounce(activeBus_, 1, (float)v); });
+    addBrush(reverbSize_,   reverbSizeL_,   "Size",   0.005, 0.06, 0.0225, [this](double v) { proc_.setBusSize(activeBus_, 1, (float)v); });
     reverbSize_.setSkewFactorFromMidPoint(0.0225);   // default peg size at noon (matches the board)
-    addBrush(reverbSend_,  reverbSendL_,  "Send",  0.0, 2.0, 1.0, [this](double v) { board_.setBusSend(activeBus_, 1, (float)v); });
-    addBrush(reverbLevel_, reverbLevelL_, "Level", 0.0, 4.0, 1.0, [this](double v) { board_.setBusLevel(activeBus_, 1, (float)v); });
-    addBrush(reverbTone_,  reverbToneL_,  "Tone",  0.0, 1.0, 0.5, [this](double v) { board_.setBusTone(activeBus_, 1, (float)v); });
+    addBrush(reverbSend_,  reverbSendL_,  "Send",  0.0, 2.0, 1.0, [this](double v) { proc_.setBusSend(activeBus_, 1, (float)v); });
+    addBrush(reverbLevel_, reverbLevelL_, "Level", 0.0, 4.0, 1.0, [this](double v) { proc_.setBusLevel(activeBus_, 1, (float)v); });
+    addBrush(reverbTone_,  reverbToneL_,  "Tone",  0.0, 1.0, 0.5, [this](double v) { proc_.setBusTone(activeBus_, 1, (float)v); });
     setupBus(reverbDecay_, reverbDecayL_, "Rev Size", 0.5, 0.95, 0.85);
     reverbDecay_.onValueChange = [this] { proc_.busReverbDecay_[activeBus_].store((float)reverbDecay_.getValue()); };
     setupBus(reverbMix_, reverbMixL_, "Mix", 0.0, 2.0, 0.0);
@@ -218,9 +218,43 @@ PlinkoAudioProcessorEditor::PlinkoAudioProcessorEditor(PlinkoAudioProcessor& p)
     // default to the delay brush (bus presets are initialized in BoardComponent)
     selectBrush(0);
 
+    addAndMakeVisible(saveBtn_);
+    saveBtn_.setButtonText("Save");
+    saveBtn_.onClick = [this] {
+        patchChooser_ = std::make_unique<juce::FileChooser>("Save patch", juce::File{}, "*.plinko");
+        auto self = juce::Component::SafePointer<PlinkoAudioProcessorEditor>(this);
+        patchChooser_->launchAsync(juce::FileBrowserComponent::saveMode | juce::FileBrowserComponent::canSelectFiles
+                                   | juce::FileBrowserComponent::warnAboutOverwriting,
+            [self](const juce::FileChooser& fc) {
+                if (self == nullptr) return;
+                auto f = fc.getResult();
+                if (f != juce::File{}) self->proc_.savePatch(f.withFileExtension("plinko"));
+            });
+    };
+    addAndMakeVisible(loadBtn_);
+    loadBtn_.setButtonText("Load");
+    loadBtn_.onClick = [this] {
+        patchChooser_ = std::make_unique<juce::FileChooser>("Load patch", juce::File{}, "*.plinko");
+        auto self = juce::Component::SafePointer<PlinkoAudioProcessorEditor>(this);
+        patchChooser_->launchAsync(juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles,
+            [self](const juce::FileChooser& fc) {
+                if (self == nullptr) return;
+                auto f = fc.getResult();
+                if (f != juce::File{} && self->proc_.loadPatch(f)) self->refreshFromProcessor();
+            });
+    };
+
     setResizable(true, true);
     setResizeLimits(820, 520, 1600, 1100);
     setSize(940, 620);
+}
+
+void PlinkoAudioProcessorEditor::refreshFromProcessor() {
+    // APVTS-attached controls (knobs, Source/Input Mode) update themselves on replaceState;
+    // sync the non-APVTS ones (per-bus sliders + the board working copy).
+    reloadBusSliders();
+    board_.reloadFromProcessor();
+    repaint();
 }
 
 void PlinkoAudioProcessorEditor::paint(juce::Graphics& g) {
@@ -256,6 +290,8 @@ void PlinkoAudioProcessorEditor::resized() {
     inputModeBox_.setBounds(top.removeFromLeft(96).reduced(2));
     loadWavBtn_.setBounds(top.removeFromLeft(84).reduced(2));
     busBox_.setBounds(top.removeFromLeft(74).reduced(2));
+    saveBtn_.setBounds(top.removeFromLeft(56).reduced(2));
+    loadBtn_.setBounds(top.removeFromLeft(56).reduced(2));
 
     auto shape = r.removeFromTop(82);   // Shape section
     layRow(shape, { &gravity_, &boardWidth_, &ballSize_, &ballBounce_ });

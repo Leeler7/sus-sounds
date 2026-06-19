@@ -7,14 +7,7 @@ PlinkoAudioProcessor::PlinkoAudioProcessor()
         .withInput("Input", juce::AudioChannelSet::stereo(), true)
         .withOutput("Output", juce::AudioChannelSet::stereo(), true)) {
     board_ = defaultBoard();
-    for (int b = 0; b < kNumBuses; ++b) {   // per-bus effect defaults (match the old global defaults)
-        busFeedback_[b]    = 0.62f;
-        busDelayMix_[b]    = 0.5f;
-        busReverbDecay_[b] = 0.85f;
-        busReverbMix_[b]   = 0.5f;
-        busDelayType_[b]   = 0;   // Digital
-        busReverbType_[b]  = 1;   // Hall
-    }
+    resetBusPresets();
     ev_.reserve(512);
     hits_.reserve(512);
     pendingEdits_.reserve(256);
@@ -218,18 +211,106 @@ juce::AudioProcessorEditor* PlinkoAudioProcessor::createEditor() {
     return new PlinkoAudioProcessorEditor(*this);
 }
 
+void PlinkoAudioProcessor::resetBusPresets() {
+    for (int b = 0; b < kNumBuses; ++b) {
+        busFeedback_[b] = 0.62f; busDelayMix_[b] = 0.5f; busReverbDecay_[b] = 0.85f; busReverbMix_[b] = 0.5f;
+        busDelayType_[b] = 0; busReverbType_[b] = 1;            // Digital / Hall
+        for (int t = 0; t < 2; ++t) {
+            busBounce_[b][t] = 1.0f; busSize_[b][t] = 0.0225f;
+            busSend_[b][t] = 1.0f; busLevel_[b][t] = 1.0f; busTone_[b][t] = 0.5f;
+        }
+    }
+}
+
+// Serialize the FULL patch: APVTS knobs + board geometry + per-bus effects/types + brush presets.
+juce::ValueTree PlinkoAudioProcessor::stateToTree() {
+    juce::ValueTree root("PLINKO_PATCH");
+    root.setProperty("version", 1, nullptr);
+    root.appendChild(apvts.copyState(), nullptr);     // the "PARAMS" subtree
+
+    juce::MemoryBlock bb;                              // board geometry
+    { juce::MemoryOutputStream os(bb, false);
+      os.writeInt(board_.pegCount);
+      os.writeFloat(board_.dropX); os.writeFloat(board_.dropY); os.writeFloat(board_.width);
+      for (int i = 0; i < board_.pegCount; ++i) {
+          os.writeFloat(board_.pegX[i]); os.writeFloat(board_.pegY[i]); os.writeFloat(board_.pegRest[i]);
+          os.writeFloat(board_.pegRad[i]); os.writeInt(board_.pegType[i]); os.writeInt(board_.pegBus[i]);
+          os.writeFloat(board_.pegSend[i]); os.writeFloat(board_.pegLevel[i]); os.writeFloat(board_.pegTone[i]);
+      } }
+    root.setProperty("board", bb, nullptr);
+
+    juce::MemoryBlock ub;                              // per-bus effects + brush presets
+    { juce::MemoryOutputStream os(ub, false);
+      for (int b = 0; b < kNumBuses; ++b) {
+          os.writeFloat(busFeedback_[b].load()); os.writeFloat(busDelayMix_[b].load());
+          os.writeFloat(busReverbDecay_[b].load()); os.writeFloat(busReverbMix_[b].load());
+          os.writeInt(busDelayType_[b].load()); os.writeInt(busReverbType_[b].load());
+          for (int t = 0; t < 2; ++t) {
+              os.writeFloat(busBounce_[b][t]); os.writeFloat(busSize_[b][t]); os.writeFloat(busSend_[b][t]);
+              os.writeFloat(busLevel_[b][t]); os.writeFloat(busTone_[b][t]);
+          } } }
+    root.setProperty("buses", ub, nullptr);
+    return root;
+}
+
+void PlinkoAudioProcessor::treeToState(const juce::ValueTree& root) {
+    if (!root.isValid() || !root.hasType("PLINKO_PATCH")) return;
+
+    auto params = root.getChildWithName(apvts.state.getType());   // "PARAMS"
+    if (params.isValid()) apvts.replaceState(params);
+
+    if (auto* mb = root.getProperty("board").getBinaryData()) {
+        juce::MemoryInputStream is(*mb, false);
+        BoardParams nb = board_;
+        int n = is.readInt();
+        nb.dropX = is.readFloat(); nb.dropY = is.readFloat(); nb.width = is.readFloat();
+        n = juce::jlimit(0, 128, n);
+        nb.pegCount = n;
+        for (int i = 0; i < n; ++i) {
+            nb.pegX[i] = is.readFloat(); nb.pegY[i] = is.readFloat(); nb.pegRest[i] = is.readFloat();
+            nb.pegRad[i] = is.readFloat(); nb.pegType[i] = is.readInt(); nb.pegBus[i] = is.readInt();
+            nb.pegSend[i] = is.readFloat(); nb.pegLevel[i] = is.readFloat(); nb.pegTone[i] = is.readFloat();
+        }
+        board_ = nb;
+        Edit ed; ed.type = EditType::BulkSet; ed.snapshot = std::make_shared<BoardParams>(board_); pushEdit(ed);
+        Edit sd; sd.type = EditType::SetDrop; sd.x = board_.dropX; sd.y = board_.dropY; pushEdit(sd);
+    }
+
+    if (auto* mb = root.getProperty("buses").getBinaryData()) {
+        juce::MemoryInputStream is(*mb, false);
+        for (int b = 0; b < kNumBuses; ++b) {
+            busFeedback_[b] = is.readFloat(); busDelayMix_[b] = is.readFloat();
+            busReverbDecay_[b] = is.readFloat(); busReverbMix_[b] = is.readFloat();
+            busDelayType_[b] = is.readInt(); busReverbType_[b] = is.readInt();
+            for (int t = 0; t < 2; ++t) {
+                busBounce_[b][t] = is.readFloat(); busSize_[b][t] = is.readFloat(); busSend_[b][t] = is.readFloat();
+                busLevel_[b][t] = is.readFloat(); busTone_[b][t] = is.readFloat();
+            }
+        }
+    }
+}
+
 void PlinkoAudioProcessor::getStateInformation(juce::MemoryBlock& dest) {
-    if (auto xml = apvts.copyState().createXml())
+    if (auto xml = stateToTree().createXml())
         copyXmlToBinary(*xml, dest);
 }
 
 void PlinkoAudioProcessor::setStateInformation(const void* data, int size) {
-    // Standalone always opens at default settings (the app's own state save is ignored). A VST3 in
-    // a DAW still restores its saved session state normally.
-    if (wrapperType == wrapperType_Standalone)
-        return;
     if (auto xml = getXmlFromBinary(data, size))
-        apvts.replaceState(juce::ValueTree::fromXml(*xml));
+        treeToState(juce::ValueTree::fromXml(*xml));
+}
+
+void PlinkoAudioProcessor::savePatch(const juce::File& f) {
+    if (auto xml = stateToTree().createXml())
+        xml->writeTo(f);
+}
+
+bool PlinkoAudioProcessor::loadPatch(const juce::File& f) {
+    if (auto xml = juce::XmlDocument::parse(f)) {
+        treeToState(juce::ValueTree::fromXml(*xml));
+        return true;
+    }
+    return false;
 }
 
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter() {

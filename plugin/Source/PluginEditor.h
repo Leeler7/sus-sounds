@@ -25,11 +25,12 @@ private:
     PlinkoAudioProcessor& proc_;
     BoardComponent board_;
 
-    juce::TextButton playStop_, clearBtn_, revertBtn_, loadWavBtn_;
+    juce::TextButton playStop_, clearBtn_, revertBtn_, loadWavBtn_, saveBtn_, loadBtn_;
     juce::ComboBox sourceBox_;   // Synth (exciter) / live Input / WAV loop
     juce::ComboBox inputModeBox_;// Granular / Live (input behavior)
     std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> sourceAtt_, inputModeAtt_;
-    std::unique_ptr<juce::FileChooser> chooser_;
+    std::unique_ptr<juce::FileChooser> chooser_, patchChooser_;
+    void refreshFromProcessor();   // sync the editor's non-APVTS controls after a patch load
 
     Knob gravity_, boardWidth_, ballSize_, ballBounce_;    // Shape
     juce::TextButton delayBrushBtn_;                        // Delay panel

@@ -214,6 +214,20 @@ PhysicsCore (bulk rebuild on Reset/BulkSet). Per-peg size already exists.
 - NOTE: bus effect params aren't persisted (non-APVTS); Standalone opens at defaults anyway, but a
   VST3 in a DAW won't recall them yet -> move to APVTS (or save in state) when persistence matters.
 
+### Save states / presets — DONE on v0.2-dev 2026-06-19
+- Full patch serialization (PlinkoAudioProcessor stateToTree/treeToState): APVTS knobs + board
+  geometry (all per-peg fields + drop, as a MemoryBlock) + per-bus effects/types + brush presets.
+  get/setStateInformation use it -> DAW sessions AND the Standalone now recall everything (the
+  Standalone-opens-at-defaults skip was removed). Board restore applies via a queued BulkSet + SetDrop.
+- Per-bus BRUSH PRESETS were moved from BoardComponent into the processor (busBounce_/busSize_/busSend_/
+  busLevel_/busTone_ [bus][2]) so the patch serializes with the editor closed; editor/board read/write
+  them via proc_ getters/setters. resetBusPresets() lives in the processor.
+- Save/Load buttons (transport row) write/read **.plinko** XML patch files via the same tree.
+  Editor refresh after load: refreshFromProcessor() (reloadBusSliders + board reloadFromProcessor;
+  APVTS controls auto-update). running_ is NOT persisted (always opens stopped).
+- FOLLOW-UP: a proper preset BROWSER/menu + factory presets (seed from PRESETS.md). running-state read
+  of board_ on the message thread for save is a benign race (board is static unless mid-edit).
+
 ## Open product questions to revisit
 
 - **Transport-stopped behavior:** when the DAW transport stops, should the ball freeze or

@@ -47,6 +47,26 @@ public:
     std::atomic<float> busFeedback_[kNumBuses], busDelayMix_[kNumBuses], busReverbDecay_[kNumBuses], busReverbMix_[kNumBuses];
     std::atomic<int>   busDelayType_[kNumBuses], busReverbType_[kNumBuses];  // 0..3 delay/reverb type per bus
 
+    // Per-bus brush presets (the peg profile new pegs get). GUI-thread only; here so the full patch
+    // serializes even with the editor closed. [bus][type] (type 0 = delay, 1 = reverb).
+    float busBounce_[kNumBuses][2], busSize_[kNumBuses][2], busSend_[kNumBuses][2],
+          busLevel_[kNumBuses][2], busTone_[kNumBuses][2];
+    void  setBusBounce(int bus, int type, float v) { busBounce_[bus & (kNumBuses-1)][type & 1] = v; }
+    void  setBusSize  (int bus, int type, float v) { busSize_  [bus & (kNumBuses-1)][type & 1] = v; }
+    void  setBusSend  (int bus, int type, float v) { busSend_  [bus & (kNumBuses-1)][type & 1] = v; }
+    void  setBusLevel (int bus, int type, float v) { busLevel_ [bus & (kNumBuses-1)][type & 1] = v; }
+    void  setBusTone  (int bus, int type, float v) { busTone_  [bus & (kNumBuses-1)][type & 1] = v; }
+    float busBounce(int bus, int type) const { return busBounce_[bus & (kNumBuses-1)][type & 1]; }
+    float busSize  (int bus, int type) const { return busSize_  [bus & (kNumBuses-1)][type & 1]; }
+    float busSend  (int bus, int type) const { return busSend_  [bus & (kNumBuses-1)][type & 1]; }
+    float busLevel (int bus, int type) const { return busLevel_ [bus & (kNumBuses-1)][type & 1]; }
+    float busTone  (int bus, int type) const { return busTone_  [bus & (kNumBuses-1)][type & 1]; }
+    void  resetBusPresets();    // all buses + effects back to default
+
+    // Patch files (Save/Load buttons) -- same serialization as the host state.
+    void savePatch(const juce::File&);
+    bool loadPatch(const juce::File&);
+
     // GUI thread: enqueue a single live peg edit. The audio thread applies it to the
     // running physics next block (no re-init -> the ball keeps flowing).
     enum class EditType { Add, Move, Delete, SetType, SetDrop, Clear, Reset, BulkSet };
@@ -83,6 +103,9 @@ private:
     std::vector<Edit> pendingEdits_, applyBuf_;
     std::atomic<bool> hasEdits_{ false };
     static constexpr uint64_t kSeed = 12345;
+
+    juce::ValueTree stateToTree();              // serialize the full patch
+    void            treeToState(const juce::ValueTree&);  // restore it
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PlinkoAudioProcessor)
 };

@@ -42,7 +42,7 @@ inline juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout
     add(pid::panWidth,    "Width",        NormalisableRange<float>(0.0f, 1.0f),        0.5f);  // noon (modulate wider/narrower)
     add(pid::dryWet,      "Dry/Wet",      NormalisableRange<float>(0.0f, 1.0f),        0.5f);  // half wet
     addSkew(pid::level, "Level", 0.0f, 6.0f, 1.0f);   // unity at noon, up to 6x
-    addSkew(pid::hold,  "Grain", 0.02f, 2.0f, 0.3f);  // input capture length: grain size (Granular) /
+    addSkew(pid::hold,  "Grain", 0.02f, 6.0f, 2.0f);  // input capture length: grain size (Granular) /
                                                        // throw length (Live). Small = clicky, large = tonal.
     add(pid::impact, "Impact", NormalisableRange<float>(0.0f, 1.0f), 0.6f);  // input transient punch
     p.push_back(std::make_unique<AudioParameterChoice>(ParameterID{ pid::source, 1 }, "Source",

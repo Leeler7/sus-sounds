@@ -92,6 +92,8 @@ void SoundEngine::startVoice(const Hit& h) {
     v.atkPos = 0;
     v.fromInput = useInput_;        // effect path: play a grain of the input
     v.inPos = h.inputStart;
+    v.tEnv = 1.0f;                   // onset transient (input transient designer): decay over ~45 ms
+    v.tMul = std::exp(-6.9f / (0.045f * (float)sr_));
     v.lp = 0.0f;
     v.lpCoef = 0.06f + 0.94f * h.brightness;  // brighter hit = less lowpass (darkness control)
 }
@@ -164,6 +166,11 @@ void SoundEngine::process(float* outL, float* outR, int n, const ScheduledHit* h
 
             float a = v.env;
             if (v.atkPos < v.atkN) { a *= (float)v.atkPos / (float)v.atkN; ++v.atkPos; }
+            if (v.fromInput) {                       // transient designer: punch in, then settle to sustain
+                float sustain = 1.0f - ep_.impact;   // impact=1 -> pure stab; 0 -> smooth swell
+                a *= sustain + (1.0f - sustain) * v.tEnv;
+                v.tEnv *= v.tMul;
+            }
             v.env *= v.envMul;
             if (v.env < 1e-4f) v.active = false;
 

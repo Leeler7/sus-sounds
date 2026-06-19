@@ -213,6 +213,7 @@ PlinkoAudioProcessorEditor::PlinkoAudioProcessorEditor(PlinkoAudioProcessor& p)
     addKnob(dryWet_, pid::dryWet,   "Dry/Wet");
     addKnob(level_,  pid::level,    "Level");
     addKnob(hold_,   pid::hold,     "Hold");
+    addKnob(impact_, pid::impact,   "Impact");
 
     // default to the delay brush (bus presets are initialized in BoardComponent)
     selectBrush(0);
@@ -260,7 +261,7 @@ void PlinkoAudioProcessorEditor::resized() {
     layRow(shape, { &gravity_, &boardWidth_, &ballSize_, &ballBounce_ });
 
     auto master = r.removeFromBottom(92); // Master section
-    layRow(master, { &tone_, &width_, &dryWet_, &level_, &hold_ });
+    layRow(master, { &tone_, &width_, &dryWet_, &level_, &hold_, &impact_ });
 
     auto left  = r.removeFromLeft(180);   // Delay panel
     auto right = r.removeFromRight(180);  // Reverb panel

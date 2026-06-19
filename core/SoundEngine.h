@@ -30,6 +30,8 @@ struct EngineParams {
                                // Short = distinct percussive echoes; long = a continuous smear.
     float holdSeconds = 0.3f;  // Live input mode: how long a peg hit keeps feeding the live signal
                                // into its bus's delay/reverb (gate release time). More = more sound.
+    float impact = 0.6f;       // input transient designer: 0 = smooth swell, 1 = pure percussive stab.
+                               // Manufactures an attack accent from the input so hits feel struck.
 };
 
 struct Hit {
@@ -78,6 +80,7 @@ private:
         float  lp = 0.0f, lpCoef = 1.0f;  // one-pole lowpass (brightness)
         int    bus = 0;             // effect bus this voice feeds
         float  send = 1.0f;         // wet send amount to the bus
+        float  tEnv = 0.0f, tMul = 0.0f;  // onset transient envelope (input transient designer)
     };
     static constexpr int NV = 64;
 

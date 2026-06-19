@@ -42,7 +42,7 @@ private:
     juce::Slider reverbBounce_, reverbSize_; juce::Label reverbBounceL_, reverbSizeL_;
     juce::Slider reverbSend_, reverbLevel_, reverbTone_;  juce::Label reverbSendL_, reverbLevelL_, reverbToneL_;
     juce::Slider reverbDecay_, reverbMix_;   juce::Label reverbDecayL_, reverbMixL_; // per-bus (active bus)
-    Knob tone_, width_, dryWet_, level_, hold_;             // Master (Hold = Live-mode capture length)
+    Knob tone_, width_, dryWet_, level_, hold_, impact_;    // Master (Hold = capture length, Impact = punch)
 
     juce::ComboBox busBox_;   // active effect bus (drives the brush + the per-bus sliders above)
     int activeBus_ = 0;

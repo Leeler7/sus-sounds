@@ -5,7 +5,11 @@
 PlinkoAudioProcessor::PlinkoAudioProcessor()
     : AudioProcessor(BusesProperties()
         .withInput("Input", juce::AudioChannelSet::stereo(), true)
-        .withOutput("Output", juce::AudioChannelSet::stereo(), true)) {
+        .withOutput("Main",  juce::AudioChannelSet::stereo(), true)
+        .withOutput("Bus 1", juce::AudioChannelSet::stereo(), true)   // per-bus dry throws (route to your FX)
+        .withOutput("Bus 2", juce::AudioChannelSet::stereo(), true)
+        .withOutput("Bus 3", juce::AudioChannelSet::stereo(), true)
+        .withOutput("Bus 4", juce::AudioChannelSet::stereo(), true)) {
     board_ = defaultBoard();
     resetBusPresets();
     ev_.reserve(512);
@@ -47,11 +51,17 @@ void PlinkoAudioProcessor::loadWavLoop(std::vector<float>&& mono) {
 }
 
 bool PlinkoAudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const {
-    auto out = layouts.getMainOutputChannelSet();
-    if (out != juce::AudioChannelSet::mono() && out != juce::AudioChannelSet::stereo())
+    if (layouts.getMainOutputChannelSet() != juce::AudioChannelSet::stereo())   // main must be stereo
         return false;
     auto in = layouts.getMainInputChannelSet();
-    return in.isDisabled() || in == out;
+    if (!in.isDisabled() && in != juce::AudioChannelSet::stereo() && in != juce::AudioChannelSet::mono())
+        return false;
+    for (int b = 1; b <= kNumBuses; ++b) {   // aux bus outputs: stereo or disabled
+        auto aux = layouts.getChannelSet(false, b);
+        if (!aux.isDisabled() && aux != juce::AudioChannelSet::stereo())
+            return false;
+    }
+    return true;
 }
 
 void PlinkoAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer&) {
@@ -183,21 +193,31 @@ void PlinkoAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::
 
     buffer.clear();
     float* L = buffer.getWritePointer(0);
-    float* R = buffer.getNumChannels() > 1 ? buffer.getWritePointer(1) : L;
-    engine_.process(L, R, n, hits_.data(), (int)hits_.size());
-    if (capDry) {                       // input mode: crossfade the live dry signal back in
-        const bool stereo = buffer.getNumChannels() > 1;
-        const float dw = userDryWet;
-        for (int i = 0; i < n; ++i) {
-            float wl = L[i], wr = stereo ? R[i] : wl;
-            L[i] = dryCopyL_[i] * (1.0f - dw) + wl * dw;
-            if (stereo) R[i] = dryCopyR_[i] * (1.0f - dw) + wr * dw;
+    float* R = buffer.getWritePointer(1);   // Main is required stereo
+
+    float* auxL[kNumBuses] = { nullptr };    // per-bus dry-throw outputs (route to your own FX)
+    float* auxR[kNumBuses] = { nullptr };
+    for (int b = 0; b < kNumBuses; ++b) {
+        auto* bus = getBus(false, b + 1);    // output buses 1..kNumBuses
+        if (bus != nullptr && bus->isEnabled()) {
+            auto ab = getBusBuffer(buffer, false, b + 1);
+            auxL[b] = ab.getWritePointer(0);
+            auxR[b] = ab.getNumChannels() > 1 ? ab.getWritePointer(1) : auxL[b];
         }
     }
-    buffer.applyGain(level);
-    {   // soft clip: pushing the gains hard saturates gracefully instead of clipping harshly
-        const bool st = buffer.getNumChannels() > 1;
-        for (int i = 0; i < n; ++i) { L[i] = std::tanh(L[i]); if (st) R[i] = std::tanh(R[i]); }
+    engine_.process(L, R, n, hits_.data(), (int)hits_.size(), auxL, auxR);
+
+    if (capDry) {                       // input mode: crossfade the continuous loop into Main
+        const float dw = userDryWet;
+        for (int i = 0; i < n; ++i) {
+            float wl = L[i], wr = R[i];
+            L[i] = dryCopyL_[i] * (1.0f - dw) + wl * dw;
+            R[i] = dryCopyR_[i] * (1.0f - dw) + wr * dw;
+        }
+    }
+    for (int i = 0; i < n; ++i) {       // Main: master level + soft clip (aux outs stay raw for routing)
+        L[i] = std::tanh(L[i] * level);
+        R[i] = std::tanh(R[i] * level);
     }
 
     const float xMin = kBoardCenterX - board_.width * 0.5f;   // centered span -> 0..1 across the board

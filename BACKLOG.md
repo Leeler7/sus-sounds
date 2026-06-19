@@ -228,6 +228,17 @@ PhysicsCore (bulk rebuild on Reset/BulkSet). Per-peg size already exists.
 - FOLLOW-UP: a proper preset BROWSER/menu + factory presets (seed from PRESETS.md). running-state read
   of board_ on the message thread for save is a benign race (board is static unless mid-edit).
 
+### Multi-out buses (route pegs to your own FX) — DONE on v0.2-dev 2026-06-19
+- Plugin now declares 5 stereo OUTPUT buses: Main + Bus 1-4. Main = the full built-in mix (unchanged).
+  Bus 1-4 each carry that effect-bus's DRY peg throws (engine vbus accumulation, pre built-in effect),
+  so the user routes each to its own DAW channel + their own delay/reverb. SoundEngine::process gained
+  auxL/auxR (per-bus dry, default null). isBusesLayoutSupported accepts main stereo + aux stereo/disabled.
+  Master Level + soft clip apply to MAIN only; aux outs are raw (made-up gain + per-peg level/pan).
+- NEEDS DAW TESTING (multi-out is host-dependent). VST3 install: copy the .vst3 to the system VST3
+  folder (build does not auto-copy; COPY_PLUGIN_AFTER_BUILD is FALSE). Input-from-instruments already
+  works by inserting Plinko after an instrument (Source = Input; DAW doesn't mute input like Standalone).
+- FUTURE (deferred): modulation/MIDI-out (peg hits -> MIDI to drive any synth); nested VST hosting.
+
 ## Open product questions to revisit
 
 - **Transport-stopped behavior:** when the DAW transport stops, should the ball freeze or

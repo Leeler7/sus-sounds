@@ -137,13 +137,15 @@ float SoundEngine::reverbProcess(int bus, float in) {
     return out;
 }
 
-void SoundEngine::process(float* outL, float* outR, int n, const ScheduledHit* hits, int nHits) {
+void SoundEngine::process(float* outL, float* outR, int n, const ScheduledHit* hits, int nHits,
+                          float* const* auxL, float* const* auxR) {
     int h = 0;
     for (int i = 0; i < n; ++i) {
         while (h < nHits && hits[h].offset <= i) { startVoice(hits[h].hit); ++h; }
 
         float dryL = 0.0f, dryR = 0.0f;
         float delInL[kNumBuses] = { 0 }, delInR[kNumBuses] = { 0 }, revIn[kNumBuses] = { 0 };
+        float vbusL[kNumBuses] = { 0 }, vbusR[kNumBuses] = { 0 };   // per-bus dry throws (aux outs)
         for (int k = 0; k < NV; ++k) {
             Voice& v = v_[k];
             if (!v.active) continue;
@@ -181,6 +183,7 @@ void SoundEngine::process(float* outL, float* outR, int n, const ScheduledHit* h
             // by the host/harness); exciter tones include their own dry.
             bool addDry = (!v.fromInput) || inputMix_;   // input throws are heard directly too (prominent)
             const int b = v.bus;
+            vbusL[b] += l; vbusR[b] += r;                // per-bus dry throw (for the aux outputs)
             if (v.type == 0) {                 // delay peg: (dry) + wet send into its bus's delay line
                 if (addDry) { dryL += l; dryR += r; }
                 delInL[b] += l * v.send; delInR[b] += r * v.send;
@@ -217,6 +220,13 @@ void SoundEngine::process(float* outL, float* outR, int n, const ScheduledHit* h
             wetL += dlo * ep_.delayMix[b] + rv * ep_.reverbMix[b];
             wetR += dro * ep_.delayMix[b] + rv * ep_.reverbMix[b];
         }
+        if (auxL != nullptr) {           // per-bus dry throws to the aux outputs (external routing)
+            for (int b = 0; b < kNumBuses; ++b) {
+                if (auxL[b]) auxL[b][i] = vbusL[b];
+                if (auxR != nullptr && auxR[b]) auxR[b][i] = vbusR[b];
+            }
+        }
+
         if (inputMix_) {                 // input source: throws (direct) + effects, full -- the host
             outL[i] = dryL + wetL;       // crossfades this against the continuous loop via Dry/Wet
             outR[i] = dryR + wetR;

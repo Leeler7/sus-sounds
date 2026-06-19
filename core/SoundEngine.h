@@ -65,7 +65,10 @@ public:
     // effects, so the strikes are prominent (not just faint echoes). Off for the synth source.
     void setInputMix(bool b) { inputMix_ = b; }
     // Render n samples. `hits` must be sorted by ascending offset.
-    void process(float* outL, float* outR, int n, const ScheduledHit* hits, int nHits);
+    // auxL/auxR (optional, size kNumBuses, entries may be null): per-bus DRY peg-throw outputs
+    // (pre built-in effect) for external routing -- each bus's raw triggered audio.
+    void process(float* outL, float* outR, int n, const ScheduledHit* hits, int nHits,
+                 float* const* auxL = nullptr, float* const* auxR = nullptr);
 
 private:
     struct Voice {
